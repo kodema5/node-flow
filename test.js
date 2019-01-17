@@ -33,6 +33,11 @@ class Test {
         }
     }
 
+    timeout({ms,value}, callback) {
+        console.log('Test.timeout', ms)
+        setTimeout(() => callback(value), ms)
+    }
+
     equ({x,y}) {
         console.log('Test.equ', x, y)
         return x==y

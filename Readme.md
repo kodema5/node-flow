@@ -27,7 +27,7 @@ More documentation can be found at https://github.com/kodema5/node-flow/
 node-flow is to define and run a payload through a function-chain.
 it reuses URL (protocol://host/path?queryString) as
 
-    [cmd|name]://factory/method?[params][&flags]
+    [cmd|name]://factory/[builder|method]?[params][&flags]
 
 where:
 
@@ -36,14 +36,15 @@ where:
         lib://?name|path=               load a library (via libLoader)
         def://name/name,...             combines a set of flow
         run://name,...?payload          runs name in chain
+        sub://name/method?_then         subscribe a callback to a method
         end://?params                   ends
         name:                           name of definition (use 3+ chars)
 
-    factory: [Class|name]
+    factory: [Class|class]
         Class                           to access static function
-        name                            access named instance
+        class                           access named instance
 
-    path: builder_|method
+    [builder_|method]
         builder_                        calls builder_ that returns a function
         method                          binds to factory method
 
@@ -59,7 +60,7 @@ where:
 
     flags:
         _type=method|builder            to override path's type
-        _then=name,...                  to be chain executed
+        _then=name,...                  to be chain executed after return
         _true=name,...                  to be executed if result is true
         _false=name,...                 to be executed if result is false
         _output=replace|merged|named    on how payload to be passed in chain
@@ -95,7 +96,7 @@ creates a new instance Test
 usually for async initialization,
 calls Test.init_ static function to create a new instance.
 
-### 2. bind functions to a name
+### bind function to a name
 
 > log-value://Test/log_?text=value
 
@@ -107,6 +108,14 @@ binds to static function Test.log_.
 binds methods of tst1 instance
 
 > sub1://tst1/sub_?initial=100
+
+### subscribing with a callback
+
+for a service that produce notification
+
+> sub://tst1/timeout?ms=1000&value.a=1&value.b=2&_then=log-value
+
+    value { a: 1, b: 2 }
 
 ### run chained-functions
 
