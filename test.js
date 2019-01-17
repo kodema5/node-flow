@@ -43,6 +43,10 @@ class Test {
         return x==y
     }
 
+    log(a) {
+        console.log(a)
+    }
+
     static async init_(p) {
         console.log('Test.init_', p)
         let a = new Test(p)

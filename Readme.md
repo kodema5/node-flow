@@ -96,6 +96,16 @@ creates a new instance Test
 usually for async initialization,
 calls Test.init_ static function to create a new instance.
 
+## direct call to a function
+
+> run://Test/log?text=hello-world
+
+    { text: 'hello-world' }
+
+> run://tst1/log?text=hello-world
+
+    { text: 'hello-world' }
+
 ### bind function to a name
 
 > log-value://Test/log_?text=value
@@ -109,13 +119,15 @@ binds methods of tst1 instance
 
 > sub1://tst1/sub_?initial=100
 
-### subscribing with a callback
+### subscribing a callback
 
 for a service that produce notification
 
-> sub://tst1/timeout?ms=1000&value.a=1&value.b=2&_then=log-value
+> log-callback://Test/log_?text=callback-value
 
-    value { a: 1, b: 2 }
+> sub://tst1/timeout?ms=1000&value.a=1&value.b=2&_then=log-callback
+
+    callback-value { a: 1, b: 2 }
 
 ### run chained-functions
 

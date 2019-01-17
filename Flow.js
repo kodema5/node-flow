@@ -80,6 +80,8 @@ class Flow {
             // run://name,..?params
             //
             case "run":
+                if (builder) break
+
                 return await me.runFunction({
                     names:factory, payload:params, _output, _then, _true, _false})
 
@@ -100,13 +102,29 @@ class Flow {
         let a = cls[builder]
         if (!a) throw "function " + factory + "." + builder + " not found"
 
-        // sub://factory/builder?params&_then
+        // sub://factory/method?params&_then
         //
         if (name=='sub') {
             let cb = async (x) => await me.runFunction({names:_then, payload:x})
             return await cls[builder](params, cb)
         }
 
+        // run://factory/method?params
+        //
+        if (name=='run') {
+            let a = await cls[builder](params)
+            if (_true && a===true) {
+                return await me.runFunction({names:_true, _output, payload:params })
+            }
+            else if (_false && a===false) {
+                return await me.runFunction({names:_false, _output, payload:params })
+            }
+            params = Flow.buildOutput(a, params, _output, name)
+            return await me.runFunction({names:_then, _output, payload:params})
+        }
+
+        // name://factory/[builder_|method]?params
+        //
         let buildType = _type
             || (builder.slice(-1)=='_' ? 'builder' : 'method')
 
