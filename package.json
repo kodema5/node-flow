@@ -1,0 +1,26 @@
+{
+  "name": "node-flow",
+  "version": "0.0.1",
+  "description": "to define and run a function-chain",
+  "main": "node-flow.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "bin": {
+    "node-flow": "./node-flow.js"
+  },
+  "files": [
+    "Flow.js",
+    "node-flow.js"
+  ],
+  "author": "kodema5@outlook.com",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^2.19.0",
+    "readline": "^1.3.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kodema5/node-flow.git"
+  }
+}
