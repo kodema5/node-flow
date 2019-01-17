@@ -57,7 +57,6 @@ where:
 
         _* are reserved for flags
 
-
     flags:
         _type=method|builder            to override path's type
         _then=name,...                  to be chain executed
@@ -76,7 +75,7 @@ node-flow scans for lines preceded with > (yup it can be a .md file)
 
 ### loading library
 
-> lib://Test?name=./examples/Test
+> lib://Test?name=./test
 
 can use path=.. or name=... that will be passed to require(..).
 
