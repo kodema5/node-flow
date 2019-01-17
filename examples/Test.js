@@ -17,7 +17,7 @@ class Test {
         return async ({x}) => {
             return await Test.timeoutFn(1,{
                 add: true,
-                x: Number(initial) + Number(x)
+                x: initial + x
             })()
         }
     }
@@ -28,7 +28,7 @@ class Test {
         return async ({x}) => {
             return await Test.timeoutFn(1,{
                 sub: true,
-                x: Number(initial) - Number(x)
+                x: initial - x
             })()
         }
     }

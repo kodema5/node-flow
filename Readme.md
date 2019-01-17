@@ -50,12 +50,13 @@ where:
         when "_" postfixed, it is assume a builder.
         it can be overridden by _type flag
 
-    params: parameters as a query string
-        a=1&a=2                         { a: ['1','2'] }
-        a=1&b=2                         { a:'1', b:'2' }
-        a.b=1&a.b=2                     { a: { b:['1','2'] } }
+    params: parsed parameters from query-string
+        a=1&a=2                         { a: [1, 2] }
+        a=1&b=2                         { a: 1, b: 2 }
+        a.b=1&a.b=2                     { a: { b: [1, 2] } }
 
         _* are reserved for flags
+
 
     flags:
         _type=method|builder            to override path's type

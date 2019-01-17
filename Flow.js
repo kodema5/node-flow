@@ -234,7 +234,7 @@ class Flow {
                 node = node[a]
             })
 
-            var v = a[1]
+            var v = Flow.parseValue(a[1])
             let c = node[name]
             if (!c) {
                 node[name] = v
@@ -254,6 +254,21 @@ class Flow {
         a.params = params
 
         return a
+    }
+
+    static parseValue(s) {
+        if (s=='') return s
+        else if (s=='NaN') return NaN
+        else if (!isNaN(s)) return Number(s)
+        else if (s=='true') return true
+        else if (s=='false') return false
+        else if (s=='null') return null
+        else if (s=='undefined') return undefined
+
+        let a = Date.parse(s)
+        if (!isNaN(a)) return new Date(a)
+
+        return s
     }
 
     static isURL(txt) {
