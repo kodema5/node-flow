@@ -260,7 +260,7 @@ class Flow {
                 node = node[a]
             })
 
-            var v = Flow.parseValue(a[1])
+            var v = name[0]!=='_' ? Flow.parseValue(a[1]) : a[1]
             let c = node[name]
             if (!c) {
                 node[name] = v
