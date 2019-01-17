@@ -31,7 +31,7 @@ it reuses URL (protocol://host/path?queryString) as
 
 where:
 
-    [cmd|name]: [lib|new|def|run|end|function_name]
+    [cmd|name]:
         new://name/Class                creates a new class
         lib://?name|path=               load a library (via libLoader)
         def://name/name,...             combines a set of flow

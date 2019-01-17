@@ -62,7 +62,8 @@ let library = program.library
 
 const flow = new Flow({
     library,
-    libLoader: loadLibrary
+    libLoader: loadLibrary,
+    onEnd: () => process.exit()
 })
 
 flow.def.apply(flow, program.args)

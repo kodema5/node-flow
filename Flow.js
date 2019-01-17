@@ -3,15 +3,17 @@ class Flow {
         factories = {},
         functions = {},
         library = typeof(global) !=='undefined' ? global : window,
-        libLoader = () => undefined
+        libLoader = () => undefined,
+        onEnd = () => undefined
     } = {}) {
         let me = this
-        me.functions = Object.apply({
-            end: async (p) => await me.end(p)
-        }, functions)
-        me.factories = factories
         me.library = library
         me.libLoader = libLoader
+        me.factories = factories
+        me.functions = Object.assign({
+            end: async (p) => await me.end(p)
+        }, functions)
+        me.onEnd = onEnd
     }
 
     async def(...urls) {
@@ -189,7 +191,7 @@ class Flow {
 
         for(const name of names.split(',')) {
             let fn = me.functions[name]
-            if (!fn) throw "function " + name + " not found"
+            if (!fn) throw "run " + name + " not found"
 
             let a = await fn(payload)
             if (a==undefined) continue
@@ -210,14 +212,19 @@ class Flow {
 
     async end(params) {
         let me = this
+
         let fns = Object.values(me.factories)
-            .map(factory => factory.end)
-            .filter(a => typeof a=='function')
+            .filter(factory => factory && typeof factory.end == 'function')
+            .map(factory => async () => await factory.end(params))
 
-        me.functions = {}
-        me.factories = {}
+        await Promise.all(fns)
 
-        return await Promise.all(fns.map(endFn => endFn(params)))
+        // release resources
+        me.functions = null
+        me.factories = null
+        me.library = null
+
+        await me.onEnd(params)
     }
 
     static parse(arg) {
