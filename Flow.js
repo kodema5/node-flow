@@ -28,10 +28,8 @@ class Flow {
             })
             .filter(Boolean)
 
-        let done = []
         for (const arg of args) {
-            let a = await me.build(arg)
-            done.push(a)
+            await me.build(arg)
         }
     }
 
@@ -136,7 +134,7 @@ class Flow {
                 func = await cls[builder](params)
                 break
             case 'method':
-                func = async (payload) => await cls[builder](Object.assign(params||{}, payload))
+                func = async (payload) => await cls[builder](Object.assign({}, params, payload))
                 break
         }
         if (!func) throw "unable to create function for " + _type + " builder type"
@@ -185,7 +183,7 @@ class Flow {
         return a
     }
 
-    async runFunction({names, payload={}, _output, _then, _true, _false}) {
+    async runFunction({names, payload, _output, _then, _true, _false}) {
         let me = this
         if (!names) return payload
 
@@ -193,7 +191,7 @@ class Flow {
             let fn = me.functions[name]
             if (!fn) throw "run " + name + " not found"
 
-            let a = await fn(payload)
+            var a = await fn(payload)
             if (a==undefined) continue
 
             if (_true && a===true) {
