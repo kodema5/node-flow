@@ -11,7 +11,7 @@ class Flow {
         me.libLoader = libLoader
         me.factories = factories
         me.functions = Object.assign({
-            end: async (p) => await me.end(p)
+            END: async (p) => await me.end(p)
         }, functions)
         me.onEnd = onEnd
     }
@@ -48,6 +48,7 @@ class Flow {
 
         switch(name) {
             // new://name/Class? params
+            // new://name/Class/method|builder_?params
             //
             case "new":
                 return me.newFactory({name:factory, params, builder})
@@ -93,8 +94,7 @@ class Flow {
 
         if (!builder) throw "builder is required"
 
-        // name://factory/builder?params
-        // factory://name/builder?params
+        // name://factory/builder_?params
         //
         let cls = me.library[factory] || me.factories[factory]
         if (!cls) throw "factory " + factory + " not found"
@@ -175,9 +175,14 @@ class Flow {
         let me = this
         if (!name) throw "name is required to load a library"
 
-        if (!me.library[builder]) throw "library " + builder + " not found"
+        let [lib, fn]  = builder.split('/')
 
-        let a = await new me.library[builder](params)
+        let Cls = me.library[lib]
+        if (!Cls) throw "library " + lib + " not found"
+
+        if (fn && !Cls[fn]) throw "static function " + lib + "." + fn + " not found"
+
+        let a = await (fn ? Cls[fn](params) : new Cls(params))
         me.factories[name] = a
 
         return a
@@ -213,7 +218,7 @@ class Flow {
 
         let fns = Object.values(me.factories)
             .filter(factory => factory && typeof factory.end == 'function')
-            .map(factory => async () => await factory.end(params))
+            .map(factory => (async () => await factory.end(params))())
 
         await Promise.all(fns)
 
@@ -228,11 +233,14 @@ class Flow {
     static parse(arg) {
         let url = new URL(arg)
 
-        let name = arg.match(new RegExp(url.protocol, 'i'))
+        let n = url.protocol.length
+        let name = arg.slice(0, n)
+            .match(new RegExp(url.protocol, 'i'))
         name = name && name[0] || ''
         name = name.replace(':', '')
 
-        let factory = arg.match(new RegExp(url.host, 'i'))
+        let factory = arg.substr(n + 2, url.host.length)
+            .match(new RegExp(url.host, 'i'))
         factory = factory && factory[0] || ''
 
         let a = {

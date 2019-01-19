@@ -1,12 +1,12 @@
 # node-flow
 
-for defining and running a payload through a function-chain.
+node-flow uses URLs to name functions, which then can be sequentially called (a flow)
 
 ## install
 
-* clone this repository
-* npm install -g ./node-flow
-* node-flow -h
+* clone this repository ```git clone https://github.com/kodema5/node-flow.git```
+* install as global ```npm install -g ./node-flow``` then ```node-flow -h```
+* or ```node ./node-flow/node-flow.js -h```
 
 ```
 Usage: node-flow [options] [url] ...
@@ -18,38 +18,35 @@ Options:
   -i, --interactive    opens a REPL, .exit to exit (default)
   -h, --help           output usage information
 
-More documentation can be found at https://github.com/kodema5/node-flow/
 ```
 
-## synopsis (read this first)
+## url format
 
 ```
-node-flow is to define and run a payload through a function-chain.
 it reuses URL (protocol://host/path?queryString) as
 
-    [cmd|name]://factory/[builder|method]?[params][&flags]
+    [name|cmd]://factory/[builder|method]?[params][&flags]
 
 where:
 
-    [cmd|name]:
-        new://name/Class                creates a new class
-        lib://?name|path=               load a library (via libLoader)
-        def://name/name,...             combines a set of flow
+    [name|cmd]:
+        name:                           name of definition (use 3+ chars)
+        new://name/Class                creates a new factory
+        lib://?name|path=               calls require(name|path)
+        def://name/name,...             combines functions into a new name
         run://name,...?payload          runs name in chain
         sub://name/method?_then         subscribe a callback to a method
-        end://?params                   ends
-        name:                           name of definition (use 3+ chars)
+        end://?params                   calls factory.end with params and exit
 
     factory: [Class|class]
-        Class                           to access static function
-        class                           access named instance
+        Class                           factory class
+        class                           factory instance
 
     [builder_|method]
         builder_                        calls builder_ that returns a function
         method                          binds to factory method
 
-        when "_" postfixed, it is assume a builder.
-        it can be overridden by _type flag
+        when "_" postfixed, it is assume a builder_.
 
     params: parsed parameters from query-string
         a=1&a=2                         { a: [1, 2] }
@@ -59,8 +56,8 @@ where:
         _* are reserved for flags
 
     flags:
-        _type=method|builder            to override path's type
-        _then=name,...                  to be chain executed after return
+        _type=method|builder            to override builder's type
+        _then=name,...                  to be chain executed next
         _true=name,...                  to be executed if result is true
         _false=name,...                 to be executed if result is false
         _output=replace|merged|named    on how payload to be passed in chain
@@ -69,114 +66,132 @@ where:
         when name is 'end', end will be called
 ```
 
-# example (run this file)
+# example
 
-node-flow scans for lines preceded with > (yup it can be a .md file)
+node-flow scans for lines preceded with >, to run this file ... (yup it can be a .md file :D)
+
     node node-flow.js -f Readme.md
 
-### loading library
+---
+
+for loading library, naming functions and creating a function chain
 
 > lib://Test?name=./test
 
-can use path=.. or name=... that will be passed to require(..).
+load test.js named Test, can use path=.. or name=... that will be passed to require(..).
 
-when using node-flow standalone,
-    the current-directory/node_modules are added module.paths.
-    to reference a file,
-    use '.' for current directory, alternatively use full path.
+> new://test/Test?name=test
 
-### create Class instances
+creates a new instance Test named tst1
 
-> new://tst1/Test?a=1
+> new://test2/Test/init_?name=test2
 
-creates a new instance Test
+calls a static Test.init_ static function, a factory-pattern for async initialization
 
-> tst2://Test/init_?b=2
+> run://test/log?text=hello-world
 
-usually for async initialization,
-calls Test.init_ static function to create a new instance.
+run test.log with {text: 'hello-world'}
 
-## direct call to a function
+> print://test/log
 
-> run://Test/log?text=hello-world
+> run://print?text=hello-world
 
-    { text: 'hello-world' }
+reference test.log method as print, to be run as below
 
-> run://tst1/log?text=hello-world
+> print-with-hello://test/log_?prefix=hello
 
-    { text: 'hello-world' }
+test.log_ is a builder that returns a function
 
-### bind function to a name
+> run://print-with-hello?text=world
 
-> log-value://Test/log_?text=value
+the above returns hello {text:'world'}
 
-usually for utility functions,
-binds to static function Test.log_.
+> run://print,print-with-hello?text=world
 
-> add1://tst1/add_?initial=1
+runs both of print and print-with-hello
 
-binds methods of tst1 instance
+> def://print-all/print,print-with-hello
 
-> sub1://tst1/sub_?initial=100
+def, creates an alias
 
-### subscribing a callback
+> run://print-all?text=world2
 
-for a service that produce notification
+---
 
-> log-callback://Test/log_?text=callback-value
+subscribing to an event
 
-> sub://tst1/timeout?ms=1000&value.a=1&value.b=2&_then=log-callback
+> print-event://test/log_?prefix=event
 
-    callback-value { a: 1, b: 2 }
+> sub://test/timeout?ms=100&value.a=1&value.b=2&_then=print-event
 
-### run chained-functions
+subscribes to an event with a callback in _then
 
-> run://add1,log-value?x=1
+---
 
-    value { add:true, x: 2 }
+lets take a look on how to branch a flow
 
-> run://add1,sub1,log-value?x=1&_output=replace
+>  print-equ://test/log_?prefix=equal
 
-this is the default for the last result
+>  print-ne://test/log_?prefix=not equal
 
-    value { sub:true, x: 98 }
+>  print-done://test/log_?prefix=done
 
-> run://add1,sub1,log-value?x=1&_output=merge
+> is-1://test/is_a_equ_b_?a=1
 
-merges the result along the chain
+is-1 compares payload a and b
 
-    value { add:true, sub:true, x: 98 }
+> run://is-1?b=1&_true=print-equ&_false=print-ne&_then=print-done
 
-> run://add1,sub1,log-value?x=1&_output=named
+flow goes to _true then to _then
 
-puts the result of a function as named property
+> run://is-1?b=2&_true=print-equ&_false=print-ne&_then=print-done
 
-    value { sub1: { sub: true, x: 99 }, add1: { add: true, x: 2 }, x: '1' }
+flow goes to _false then to _then
 
-### conditional flow
+---
 
-> equ://tst1/equ
+passing payload in the flow.
 
-> log-no-value://Test/log_?text=not-value
+> print-output://test/log_?prefix=payload
 
-equ returns true if payload .x==.y
-to bind to a sync method
+> inc-a-by-1://test/inc_key_by_?key=a&value=1
 
-> run://add1,equ?x=1&y=2&_output=merge&_true=log-value
+returns {a: payload.a + 1
 
-    value { x: 2, y: '2', add: true }
+> inc-b-by-1://test/inc_key_by_?key=b&value=1
 
-> run://add1,equ?x=1&y=3&_output=merge&_true=log-value&_false=log-no-value&_then=log-value
+returns {b: payload.b + 1}
 
-    not-value { x: 2, y: '3', add: true }
+> run://inc-a-by-1,inc-b-by-1,print-output?a=1&b=1&_output=replace
 
-### defining a set of named-functions
+returns the last operation's {b:1}, this is default behavior
 
-> def://flow1/add1,equ?x=1&_output=merge&_true=log-value&_false=log-no-value
+> run://inc-a-by-1,inc-b-by-1,print-output?a=1&b=1&_output=merge
 
-creates flow1 with to call add1,equ
+combines operations' result {a:2, b:2}
 
-> run://flow1?y=5
+> run://inc-a-by-1,inc-b-by-1,print-output?a=1&b=1&_output=named
 
-call flow1 with payload
+adds to the payload { 'inc-b-by-1': { b: 2 }, 'inc-a-by-1': { a: 2 }, a: 1, b: 1 }
 
+---
+
+ending flow
+
+> sub://test/timeout?ms=100&_then=END
+
+when END is in the flow, all instance's end function (if-exist) will be called,
+and program terminates
+
+---
+
+for interactive development
+
+    node-flow -i
+    > lib://Test?path=./test
+    > new://test/Test?name=test
+    Test.constructor test
+    > run://test/log?text=hello node-flow
+    { text: 'hello node-flow' }
+    > .exit
+    --ending test

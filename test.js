@@ -6,59 +6,44 @@ class Test {
         }
     }
 
-    constructor(p) {
-        console.log('Test.constructor', p)
-        this.cnt = 0
+    constructor({name}) {
+        console.log('Test.constructor', name)
+        this.name = name
     }
 
-    async add_({initial}) {
-        let me = this
-        console.log('Test.add_', initial)
-        return async ({x}) => {
-            return await Test.timeoutFn(1,{
-                add: true,
-                x: initial + x
-            })()
-        }
-    }
-
-    async sub_({initial}) {
-        let me = this
-        console.log('Test.sub_', initial)
-        return async ({x}) => {
-            return await Test.timeoutFn(1,{
-                sub: true,
-                x: initial - x
-            })()
-        }
-    }
-
-    timeout({ms,value}, callback) {
-        console.log('Test.timeout', ms)
-        setTimeout(() => callback(value), ms)
-    }
-
-    equ({x,y}) {
-        console.log('Test.equ', x, y)
-        return x==y
+    static async init_(p) {
+        console.log('Test.init_', p)
+        let a = new Test(p)
+        return a // await (Test.timeoutFn(1,a))()
     }
 
     log(a) {
         console.log(a)
     }
 
-    static async init_(p) {
-        console.log('Test.init_', p)
-        let a = new Test(p)
-        return await Test.timeoutFn(1,a)()
+    log_({prefix}) {
+        return (a) => console.log(prefix, a)
     }
 
-    static log(a) {
-        console.log(a)
+
+    is_a_equ_b_({a}) {
+        return ({b}) => a==b
     }
 
-    static log_({text}) {
-        return (a) => console.log(text, a)
+    timeout({ms,value}, callback) {
+        setTimeout(() => callback(value), ms)
+    }
+
+    async inc_key_by_({key, value}) {
+        return (p) => {
+            let a = p[key]
+            a = isNaN(a) ? 0 : a
+            return ({ [key]: value + a})
+        }
+    }
+
+    end() {
+        return console.log('--ending', this.name)
     }
 }
 
