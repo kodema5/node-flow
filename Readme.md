@@ -23,22 +23,23 @@ Options:
 ## url format
 
 ```
-it reuses URL (protocol://host/path?queryString) as
+node-flow reuses URL, protocol://host/path?queryString as
 
-    [name|cmd]://factory/[builder|method]?[params][&flags]
+    [name|cmd]://[Class|class]/[builder|method]?[params][&flags]
 
 where:
 
     [name|cmd]:
         name:                           name of definition (use 3+ chars)
         new://name/Class                creates a new factory
-        lib://?name|path=               calls require(name|path)
+        new://name/Class/method         calls static method for new factory
+        lib://Name?name|path=           calls require(name|path)
         def://name/name,...             combines functions into a new name
         run://name,...?payload          runs name in chain
         sub://name/method?_then         subscribe a callback to a method
         end://?params                   calls factory.end with params and exit
 
-    factory: [Class|class]
+    [Class|class]
         Class                           factory class
         class                           factory instance
 
@@ -61,9 +62,7 @@ where:
         _true=name,...                  to be executed if result is true
         _false=name,...                 to be executed if result is false
         _output=replace|merged|named    on how payload to be passed in chain
-                                        default is replace
-
-        when name is 'end', end will be called
+                                        (default: replace)
 ```
 
 # example
@@ -76,17 +75,17 @@ node-flow scans for lines preceded with >, to run this file ... (yup it can be a
 
 for loading library, naming functions and creating a function chain
 
-> lib://Test?name=./test
+> lib://Test?path=./test
 
 load test.js named Test, can use path=.. or name=... that will be passed to require(..).
 
-> new://test/Test?name=test
+> new://test/Test?a=test
 
 creates a new instance Test named tst1
 
-> new://test2/Test/init_?name=test2
+> new://test2/Test/init_?a=test2
 
-calls a static Test.init_ static function, a factory-pattern for async initialization
+calls a static Test.init_ static function for async initiation
 
 > run://test/log?text=hello-world
 
@@ -164,15 +163,15 @@ returns {b: payload.b + 1}
 
 > run://inc-a-by-1,inc-b-by-1,print-output?a=1&b=1&_output=replace
 
-returns the last operation's {b:1}, this is default behavior
+_output=replace returns the last operation's {b:1}, this is default behavior
 
 > run://inc-a-by-1,inc-b-by-1,print-output?a=1&b=1&_output=merge
 
-combines operations' result {a:2, b:2}
+_output=merge combines operations' result {a:2, b:2}
 
 > run://inc-a-by-1,inc-b-by-1,print-output?a=1&b=1&_output=named
 
-adds to the payload { 'inc-b-by-1': { b: 2 }, 'inc-a-by-1': { a: 2 }, a: 1, b: 1 }
+_output=named adds to payload each results of named function, { 'inc-b-by-1': { b: 2 }, 'inc-a-by-1': { a: 2 }, a: 1, b: 1 }
 
 ---
 

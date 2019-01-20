@@ -6,9 +6,9 @@ class Test {
         }
     }
 
-    constructor({name}) {
-        console.log('Test.constructor', name)
-        this.name = name
+    constructor({a}) {
+        console.log('Test.constructor', a)
+        this.a = a
     }
 
     static async init_(p) {
@@ -43,7 +43,7 @@ class Test {
     }
 
     end() {
-        return console.log('--ending', this.name)
+        return console.log('--ending', this.a)
     }
 }
 
