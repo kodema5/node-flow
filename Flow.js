@@ -39,6 +39,7 @@ class Flow {
         builder,
         params,
         _type, // builder_|method
+        _call,
         _then,
         _true,
         _false,
@@ -94,18 +95,16 @@ class Flow {
 
         if (!builder) throw "builder is required"
 
-        // name://factory/builder_?params
-        //
         let cls = me.library[factory] || me.factories[factory]
         if (!cls) throw "factory " + factory + " not found"
 
         let a = cls[builder]
         if (!a) throw "function " + factory + "." + builder + " not found"
 
-        // sub://factory/method?params&_then
+        // sub://factory/method?params&_call
         //
         if (name=='sub') {
-            let cb = async (x) => await me.runFunction({names:_then, payload:x})
+            let cb = async (x) => await me.runFunction({names:_call, payload:x})
             return await cls[builder](params, cb)
         }
 
@@ -125,23 +124,27 @@ class Flow {
 
         // name://factory/[builder_|method]?params
         //
+        let callback = _call
+            ? async (x) => await me.runFunction({names:_call, _output, payload:x})
+            : null
+
         let buildType = _type
             || (builder.slice(-1)=='_' ? 'builder' : 'method')
 
         let func
         switch(buildType) {
             case 'builder':
-                func = await cls[builder](params)
+                func = await cls[builder](params, callback)
                 break
             case 'method':
-                func = async (payload) => await cls[builder](Object.assign({}, params, payload))
+                func = async (payload) => await cls[builder](Object.assign({}, params, payload), callback)
                 break
         }
         if (!func) throw "unable to create function for " + _type + " builder type"
 
-
         me.functions[name] = async payload => {
-            let a = await func(payload)
+
+            let a = await func(payload, callback)
 
             if (_true && a===true) {
                 return await me.runFunction({names:_true, _output, payload })
@@ -193,10 +196,10 @@ class Flow {
         if (!names) return payload
 
         for(const name of names.split(',')) {
-            let fn = me.functions[name]
-            if (!fn) throw "run " + name + " not found"
+            let func = me.functions[name]
+            if (!func) throw "run " + name + " not found"
 
-            var a = await fn(payload)
+            var a = await func(payload)
             if (a==undefined) continue
 
             if (_true && a===true) {
@@ -216,11 +219,11 @@ class Flow {
     async end(params) {
         let me = this
 
-        let fns = Object.values(me.factories)
+        let funcs = Object.values(me.factories)
             .filter(factory => factory && typeof factory.end == 'function')
             .map(factory => (async () => await factory.end(params))())
 
-        await Promise.all(fns)
+        await Promise.all(funcs)
 
         // release resources
         me.functions = null

@@ -61,6 +61,7 @@ where:
         _then=name,...                  to be chain executed next
         _true=name,...                  to be executed if result is true
         _false=name,...                 to be executed if result is false
+        _call=name,...                  to be passed as a callback
         _output=replace|merged|named    on how payload to be passed in chain
                                         (default: replace)
 ```
@@ -117,13 +118,21 @@ def, creates an alias
 
 ---
 
-subscribing to an event
+subscribing to an event/passing a callback
 
-> print-event://test/log_?prefix=event
+> print-event://test/log_?prefix=an event
 
-> sub://test/timeout?ms=100&value.a=1&value.b=2&_then=print-event
+> sub://test/timeout?ms=100&value.a=1&value.b=2&_call=print-event
 
-subscribes to an event with a callback in _then
+subscribes to an event with a callback in _call
+
+> print-named-event://test/log_?prefix=named-event
+
+> named-event://test/timeout_?ms=100&value.a=2&value.b=3&_call=print-named-event
+
+> run://named-event
+
+registers a named-event with a callback
 
 ---
 

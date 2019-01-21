@@ -25,13 +25,18 @@ class Test {
         return (a) => console.log(prefix, a)
     }
 
-
     is_a_equ_b_({a}) {
         return ({b}) => a==b
     }
 
     timeout({ms,value}, callback) {
         setTimeout(() => callback(value), ms)
+    }
+
+    timeout_({ms,value}, callback) {
+        return async () => {
+            setTimeout(() => callback(value), ms)
+        }
     }
 
     async inc_key_by_({key, value}) {
