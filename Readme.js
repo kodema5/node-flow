@@ -14,7 +14,7 @@ class Test {
     static async init_(p) {
         console.log('Test.init_', p)
         let a = new Test(p)
-        return a // await (Test.timeoutFn(1,a))()
+        return await (Test.timeoutFn(1,a))()
     }
 
     log(a) {

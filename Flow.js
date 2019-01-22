@@ -63,8 +63,11 @@ class Flow {
 
                 for (const p of path.split(',')) {
                     let a = await me.libLoader(p)
-                    if (!a) throw "library " + p + " not found"
 
+                    // if loads an .md file
+                    if (!a && !factory) continue
+
+                    if (!a) throw "library " + p + " not found"
                     let name = factory || p.split('/').pop()
                     me.library[name] = a
                 }
@@ -218,6 +221,8 @@ class Flow {
 
     async end(params) {
         let me = this
+        if (me.ended) return
+        me.ended = true
 
         let funcs = Object.values(me.factories)
             .filter(factory => factory && typeof factory.end == 'function')

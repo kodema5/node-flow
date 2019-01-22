@@ -9,23 +9,9 @@ const Flow = require('./Flow')
 program
     .version('0.0.1', '-v, --version')
     .usage('[options] [url] ...')
-    .option('-l, --library [lib]'
-        , 'add library paths'
-        , (s,m) => m.concat(s.split(','))
-        , [])
-
     .option('-f, --file [path]'
-        , 'scans file(s) for lines preceded with "> "'
-        , (p,m) => {
-            let fn = path.resolve(process.cwd(), p)
-            let txt = fs.readFileSync(fn, {encoding: "utf8"})
-            let ls = txt.split(/\r?\n/)
-                .map(s => s.slice(0,2)=='> ' ? s.slice(2) : '')
-                .map(s => s.trim())
-                .filter(Boolean)
-                .filter(Flow.isURL)
-            return m.concat(ls)
-        }
+        , 'loads library or file for lines preceded with "> "'
+        , (s,m) => m.concat(s.split(','))
         ,[])
 
     .option('-i, --interactive'
@@ -37,40 +23,61 @@ program
     })
     .parse(process.argv)
 
-program.args = program.file
-    .concat(program.args)
-
-
 let cwd = path.join(process.cwd(), 'node_modules')
 if (module.paths.indexOf(cwd)<0) {
     module.paths.unshift(cwd)
 }
 
-function loadLibrary(p) {
-    p = (p[0]==".")
-        ? path.join(process.cwd(), p)
-        : p
-    return require(p)
-}
-
-let library = program.library
-    .reduce( (lib, path) => {
-        let name = path.split('/').pop()
-        lib[name] = loadLibrary(path)
-        return lib
-    }, {})
-
+let library = {}
 const flow = new Flow({
     library,
     libLoader: loadLibrary,
     onEnd: () => process.exit()
 })
 
+function loadLibrary(p) {
+    let fn = p.split('/').pop()
+    let ext = fn.split('.')[1]
+
+    // load nodejs library
+    if (!ext || ext=='js') {
+        p = (p[0]==".")
+            ? path.join(process.cwd(), p)
+            : p
+        return require(p)
+    }
+
+    // load flow file
+    else {
+        flow.def.apply(flow, readFile(p))
+            .catch(x => console.log(x))
+    }
+}
+
+function readFile(p) {
+    let fn = path.resolve(process.cwd(), p)
+    let txt = fs.readFileSync(fn, {encoding: "utf8"})
+    return txt.split(/\r?\n/)
+        .map(s => s.slice(0,2)=='> ' ? s.slice(2) : '')
+        .map(s => s.trim())
+        .filter(Boolean)
+        .filter(Flow.isURL)
+}
+
+program.file.forEach((p) => {
+    let a = loadLibrary(p)
+    if (!a) return
+
+    let fn = p.split('/').pop()
+    let n = fn.split('.')[0]
+    library[n] = a
+})
+
 flow.def.apply(flow, program.args)
     .catch(x => console.log(x))
 
 
-if (program.interactive || program.args.length==0) {
+if (program.interactive || program.args.length==0 && program.file.length==0) {
     const rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout,
@@ -97,5 +104,8 @@ if (program.interactive || program.args.length==0) {
 
 process.on("SIGINT", async () => {
     await flow.end()
-    process.exit(0)
+})
+
+process.on("exit", async() => {
+    await flow.end()
 })

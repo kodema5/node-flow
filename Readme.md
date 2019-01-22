@@ -12,12 +12,12 @@ node-flow uses URLs to name functions, which then can be sequentially called (a 
 Usage: node-flow [options] [url] ...
 
 Options:
-  -v, --version        output the version number
-  -l, --library [lib]  add library paths (default: [])
-  -f, --file [path]    scans file(s) for lines preceded with "> " (default: [])
-  -i, --interactive    opens a REPL, .exit to exit (default)
-  -h, --help           output usage information
+  -v, --version      output the version number
+  -f, --file [path]  loads library or file for lines preceded with "> " (default: [])
+  -i, --interactive  opens a REPL, .exit to exit (default)
+  -h, --help         output usage information
 
+More documentation can be found at https://github.com/kodema5/node-flow/
 ```
 
 ## url format
@@ -33,7 +33,7 @@ where:
         name:                           name of definition (use 3+ chars)
         new://name/Class                creates a new factory
         new://name/Class/method         calls static method for new factory
-        lib://Name?name|path=           calls require(name|path)
+        lib://Name?name|path=           loads library or file
         def://name/name,...             combines functions into a new name
         run://name,...?payload          runs name in chain
         sub://name/method?_then         subscribe a callback to a method
@@ -76,9 +76,9 @@ node-flow scans for lines preceded with >, to run this file ... (yup it can be a
 
 for loading library, naming functions and creating a function chain
 
-> lib://Test?path=./test
+> lib://Test?path=./Readme
 
-load test.js named Test, can use path=.. or name=... that will be passed to require(..).
+load Readme.js named Test, can use path=.. or name=... that will be passed to require(..).
 
 > new://test/Test?a=test
 
@@ -93,7 +93,7 @@ calls a static Test.init_ static function for async initiation
 run test.log with {text: 'hello-world'}
 
 > print://test/log
-
+\
 > run://print?text=hello-world
 
 reference test.log method as print, to be run as below
@@ -121,15 +121,15 @@ def, creates an alias
 subscribing to an event/passing a callback
 
 > print-event://test/log_?prefix=an event
-
+\
 > sub://test/timeout?ms=100&value.a=1&value.b=2&_call=print-event
 
 subscribes to an event with a callback in _call
 
 > print-named-event://test/log_?prefix=named-event
-
+\
 > named-event://test/timeout_?ms=100&value.a=2&value.b=3&_call=print-named-event
-
+\
 > run://named-event
 
 registers a named-event with a callback
@@ -139,11 +139,11 @@ registers a named-event with a callback
 lets take a look on how to branch a flow
 
 >  print-equ://test/log_?prefix=equal
-
+\
 >  print-ne://test/log_?prefix=not equal
-
+\
 >  print-done://test/log_?prefix=done
-
+\
 > is-1://test/is_a_equ_b_?a=1
 
 is-1 compares payload a and b
@@ -161,7 +161,7 @@ flow goes to _false then to _then
 passing payload in the flow.
 
 > print-output://test/log_?prefix=payload
-
+\
 > inc-a-by-1://test/inc_key_by_?key=a&value=1
 
 returns {a: payload.a + 1
