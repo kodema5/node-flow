@@ -11,6 +11,7 @@ class Flow {
         me.libLoader = libLoader
         me.factories = factories
         me.functions = Object.assign({
+            log: (p) => console.log(p),
             END: async (p) => await me.end(p)
         }, functions)
         me.onEnd = onEnd
