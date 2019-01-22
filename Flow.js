@@ -306,10 +306,6 @@ class Flow {
         else if (s=='false') return false
         else if (s=='null') return null
         else if (s=='undefined') return undefined
-
-        let a = Date.parse(s)
-        if (!isNaN(a)) return new Date(a)
-
         return s
     }
 
