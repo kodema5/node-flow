@@ -12,10 +12,11 @@ node-flow uses URLs to name functions, which then can be sequentially called (a 
 Usage: node-flow [options] [url] ...
 
 Options:
-  -v, --version      output the version number
-  -f, --file [path]  loads library or file for lines preceded with "> " (default: [])
-  -i, --interactive  opens a REPL, .exit to exit (default)
-  -h, --help         output usage information
+  -v, --version         output the version number
+  -l, --library [path]  add folder to module paths (default: [])
+  -f, --file [path]     loads node-modules as library or execute file.ext!=js (default: [])
+  -i, --interactive     opens a REPL, .exit to exit (default)
+  -h, --help            output usage information
 
 More documentation can be found at https://github.com/kodema5/node-flow/
 ```

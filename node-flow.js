@@ -9,12 +9,12 @@ const Flow = require('./Flow')
 program
     .version('0.0.1', '-v, --version')
     .usage('[options] [url] ...')
-    .option('-f, --file [path]'
-        , 'loads library or file for lines preceded with "> "'
+    .option('-l, --library [path]'
+        , 'add folder to module paths'
         , (s,m) => m.concat(s.split(','))
         ,[])
-    .option('-l, --library [path]'
-        , 'add folder to search-path/module.paths'
+    .option('-f, --file [path]'
+        , 'loads node-modules as library or execute file.ext!=js'
         , (s,m) => m.concat(s.split(','))
         ,[])
     .option('-i, --interactive'
