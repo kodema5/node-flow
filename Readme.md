@@ -67,7 +67,17 @@ where:
                                         (default: replace)
 ```
 
-# example
+# common functions
+
+to be accessed when no factory supplied, ex: run:///log?a=hello-world
+
+    log(payload)                        console.log
+    log_({prefix})(payload)             console.log(prefix, payload)
+    timeout({ms,value}, _call)          setTimeout(_call(value), ms)
+    timeout_({ms,value}, _call)         () => setTimeout(_call(value), ms)
+    END                                 calls end()
+
+# usage
 
 node-flow scans for lines preceded with >, to run this file ... (yup it can be a .md file :D)
 
@@ -89,19 +99,19 @@ creates a new instance Test named tst1
 
 calls a static Test.init_ static function for async initiation
 
-> run://test/log?text=hello-world
+> run:///log?text=hello-world
 
-run test.log with {text: 'hello-world'}
+run log with {text: 'hello-world'}
 
-> print://test/log
+> print:///log
 \
 > run://print?text=hello-world
 
-reference test.log method as print, to be run as below
+reference log method as print, to be run as below
 
-> print-with-hello://test/log_?prefix=hello
+> print-with-hello:///log_?prefix=hello
 
-test.log_ is a builder that returns a function
+log_ is a builder that returns a function
 
 > run://print-with-hello?text=world
 
@@ -121,15 +131,15 @@ def, creates an alias
 
 subscribing to an event/passing a callback
 
-> print-event://test/log_?prefix=an event
+> print-event:///log_?prefix=an event
 \
-> sub://test/timeout?ms=100&value.a=1&value.b=2&_call=print-event
+> sub:///timeout?ms=100&value.a=1&value.b=2&_call=print-event
 
 subscribes to an event with a callback in _call
 
-> print-named-event://test/log_?prefix=named-event
+> print-named-event:///log_?prefix=named-event
 \
-> named-event://test/timeout_?ms=100&value.a=2&value.b=3&_call=print-named-event
+> named-event:///timeout_?ms=100&value.a=2&value.b=3&_call=print-named-event
 \
 > run://named-event
 
@@ -139,11 +149,11 @@ registers a named-event with a callback
 
 lets take a look on how to branch a flow
 
->  print-equ://test/log_?prefix=equal
+>  print-equ:///log_?prefix=equal
 \
->  print-ne://test/log_?prefix=not equal
+>  print-ne:///log_?prefix=not equal
 \
->  print-done://test/log_?prefix=done
+>  print-done:///log_?prefix=done
 \
 > is-1://test/is_a_equ_b_?a=1
 
@@ -161,11 +171,11 @@ flow goes to _false then to _then
 
 passing payload in the flow.
 
-> print-output://test/log_?prefix=payload
+> print-output:///log_?prefix=payload
 \
 > inc-a-by-1://test/inc_key_by_?key=a&value=1
 
-returns {a: payload.a + 1
+returns {a: payload.a + 1}
 
 > inc-b-by-1://test/inc_key_by_?key=b&value=1
 
@@ -187,7 +197,9 @@ _output=named adds to payload each results of named function, { 'inc-b-by-1': { 
 
 ending flow
 
-> sub://test/timeout?ms=100&_then=END
+> print-end:///log_?prefix=end
+\
+> sub:///timeout?ms=1000&_call=print-end,END
 
 when END is in the flow, all instance's end function (if-exist) will be called,
 and program terminates
@@ -196,10 +208,11 @@ and program terminates
 
 for interactive development (default)
 
-    node-flow
-    > lib://Test?path=./Readme
+    node-flow -f Readme.js -i
+    > lib://Test?path=Readme.js
     > new://test/Test?a=test
     Test.constructor test
+    > inc-a-by-1://test/inc_key_by_?key=a&value=1
     > .list
     library:
       Test
@@ -207,8 +220,12 @@ for interactive development (default)
       test
     functions:
       END
+      inc-a-by-1
       log
-    > run://test/log?text=hello node-flow
-    { text: 'hello node-flow' }
+      log_
+      timeout
+      timeout_
+    > run://inc-a-by-1?a=2&_then=log
+    { a: 3 }
     > .exit
     --ending test
