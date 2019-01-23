@@ -193,12 +193,20 @@ and program terminates
 
 ---
 
-for interactive development
+for interactive development (default)
 
-    node-flow -i
-    > lib://Test?path=./test
-    > new://test/Test?name=test
+    node-flow
+    > lib://Test?path=./Readme
+    > new://test/Test?a=test
     Test.constructor test
+    > .list
+    library:
+      Test
+    factories:
+      test
+    functions:
+      END
+      log
     > run://test/log?text=hello node-flow
     { text: 'hello node-flow' }
     > .exit

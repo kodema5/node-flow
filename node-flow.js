@@ -95,6 +95,16 @@ if (program.interactive || program.args.length==0 && program.file.length==0) {
             await flow.end()
             process.exit(0)
         }
+
+        else if (a == '.list') {
+            console.log('library:')
+            Object.keys(flow.library).sort().forEach( (a) => console.log(' ', a))
+            console.log('factories:')
+            Object.keys(flow.factories).sort().forEach( (a) => console.log(' ', a))
+            console.log('functions:')
+            Object.keys(flow.functions).sort().forEach( (a) => console.log(' ', a))
+        }
+
         else if (Flow.isURL(a)) {
             await flow.def(a)
         }
