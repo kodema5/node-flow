@@ -12,6 +12,7 @@ class Flow {
         me.factories = factories
         me.functions = Object.assign({
             log: (p) => console.log(p),
+            log_: ({prefix}) => ((x) => console.log(prefix, x)),
             END: async (p) => await me.end(p)
         }, functions)
         me.onEnd = onEnd
@@ -99,7 +100,9 @@ class Flow {
 
         if (!builder) throw "builder is required"
 
-        let cls = me.library[factory] || me.factories[factory]
+        let cls = !factory
+            ? me.functions
+            : (me.library[factory] || me.factories[factory])
         if (!cls) throw "factory " + factory + " not found"
 
         let a = cls[builder]
