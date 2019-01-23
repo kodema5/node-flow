@@ -13,7 +13,10 @@ program
         , 'loads library or file for lines preceded with "> "'
         , (s,m) => m.concat(s.split(','))
         ,[])
-
+    .option('-l, --library [path]'
+        , 'add folder to search-path/module.paths'
+        , (s,m) => m.concat(s.split(','))
+        ,[])
     .option('-i, --interactive'
         , 'opens a REPL, .exit to exit (default)')
 
@@ -23,10 +26,14 @@ program
     })
     .parse(process.argv)
 
-let cwd = path.join(process.cwd(), 'node_modules')
-if (module.paths.indexOf(cwd)<0) {
-    module.paths.unshift(cwd)
-}
+
+program.library.concat('.').forEach((p) => {
+    let cd = path.resolve(p.trim())
+    if (module.paths.indexOf(cd)>=0) return
+    module.paths.push(cd)
+    module.paths.push(path.join(cd, './node_modules'))
+})
+
 
 let library = {}
 const flow = new Flow({
