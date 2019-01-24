@@ -244,16 +244,16 @@ for interactive development (default)
     > inc-a-by-1://test/inc_key_by_?key=a&value=1
     > .list
     library:
-      Test
+        Test
     factories:
-      test
+        test
     functions:
-      END
-      inc-a-by-1
-      log
-      log_
-      timeout
-      timeout_
+        END
+        inc-a-by-1
+        log
+        log_
+        timeout
+        timeout_
     > run://inc-a-by-1?a=2&_then=log
     { a: 3 }
     > .exit

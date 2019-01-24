@@ -188,10 +188,11 @@ class Flow {
                 return await me.runFunction({names:_false, _output, payload })
             }
 
-            payload = Flow.buildOutput(a, payload, _output, name)
             if (_id) {
-                payload = { [_id]: payload }
+                a = { [_id]: a}
             }
+
+            payload = Flow.buildOutput(a, payload, _output, name)
             return await me.runFunction({names:_then, _output, payload})
         }
     }
