@@ -56,6 +56,7 @@ where:
         a.b=1&a.b=2                     { a: { b: [1, 2] } }
 
         _* are reserved for flags
+        .* params will not be passed to next in chain
 
     flags:
         _type=method|builder            to override builder's type
@@ -63,6 +64,7 @@ where:
         _true=name,...                  to be executed if result is true
         _false=name,...                 to be executed if result is false
         _call=name,...                  to be passed as a callback
+        _id=name                        to wrap output as { [_id]: output }
         _output=replace|merged|named    on how payload to be passed in chain
                                         (default: replace)
 ```
@@ -75,6 +77,7 @@ to be accessed when no factory supplied, ex: run:///log?a=hello-world
     log_({prefix})(payload)             console.log(prefix, payload)
     timeout({ms,value}, _call)          setTimeout(_call(value), ms)
     timeout_({ms,value}, _call)         () => setTimeout(_call(value), ms)
+    var_(params)                        () => params
     END                                 calls end()
 
 # usage
@@ -168,6 +171,31 @@ flow goes to _true then to _then
 flow goes to _false then to _then
 
 ---
+params and output to a function.
+
+> my-var:///var_?a=1&b=2
+\
+> run://my-var,log
+
+var_ accepts params and returns it when called. returns { a:1, b:2 }
+
+> my-var:///var_?a=1&.b=2
+\
+> run://my-var,log
+
+.params, params started with '.', is to facility function internal parameters,
+they passed to function as: { a:1, '.': { b:2 }}.
+it will not be passed to next function.
+the above returns { a: 1 }
+
+> my-var:///var_?a=1&_id=my
+\
+> run://my-var,log
+
+_id to facilitate function that returns a raw value to be identified in the payload.
+the above returns { my: { a: 1 }}
+
+---
 
 passing payload in the flow.
 
@@ -191,7 +219,8 @@ _output=merge combines operations' result {a:2, b:2}
 
 > run://inc-a-by-1,inc-b-by-1,print-output?a=1&b=1&_output=named
 
-_output=named adds to payload each results of named function, { 'inc-b-by-1': { b: 2 }, 'inc-a-by-1': { a: 2 }, a: 1, b: 1 }
+_output=named adds to payload each results of named function,
+{ 'inc-b-by-1': { b: 2 }, 'inc-a-by-1': { a: 2 }, a: 1, b: 1 }
 
 ---
 

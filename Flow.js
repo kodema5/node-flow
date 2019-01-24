@@ -35,6 +35,10 @@ class Flow {
                 }
             },
 
+            // > my-var:///var_?a=12&b=12
+            //
+            var_: (params) => () => params,
+
             END: async (p) => await me.end(p)
 
         }, functions)
@@ -68,7 +72,8 @@ class Flow {
         _then,
         _true,
         _false,
-        _output = 'replace'
+        _output = 'replace',
+        _id
     }) {
         let me = this
 
@@ -184,6 +189,9 @@ class Flow {
             }
 
             payload = Flow.buildOutput(a, payload, _output, name)
+            if (_id) {
+                payload = { [_id]: payload }
+            }
             return await me.runFunction({names:_then, _output, payload})
         }
     }
@@ -200,6 +208,9 @@ class Flow {
             default:
                 payload = value
                 break
+        }
+        if (payload) {
+            delete payload['.']
         }
         return payload
     }
@@ -304,6 +315,7 @@ class Flow {
 
             var node = params
             ns.forEach((a) => {
+                a = a || '.'
                 if (!node[a]) node[a] = {}
                 node = node[a]
             })
