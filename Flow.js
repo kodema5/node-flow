@@ -37,7 +37,7 @@ class Flow {
 
             // > my-var:///var_?a=12&b=12
             //
-            var_: (params) => () => params,
+            var_: (params) => (payload) => Object.assign({}, params, payload),
 
             END: async (p) => await me.end(p)
 

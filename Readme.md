@@ -77,7 +77,7 @@ to be accessed when no factory supplied, ex: run:///log?a=hello-world
     log_({prefix})(payload)             console.log(prefix, payload)
     timeout({ms,value}, _call)          setTimeout(_call(value), ms)
     timeout_({ms,value}, _call)         () => setTimeout(_call(value), ms)
-    var_(params)                        () => params
+    var_(params)(payload)               returns {} || params || payload
     END                                 calls end()
 
 # usage
