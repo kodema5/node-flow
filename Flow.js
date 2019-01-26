@@ -114,21 +114,27 @@ class Flow {
             return await cls[builder](params, cb)
         }
 
-        // run://factory/method?params
+        // run://factory/method|builder|property?params
         //
         if (name=='run') {
-            let a = await cls[builder](params)
+            let a = typeof(cls[builder]) =='function'
+                ? await cls[builder](params)
+                : await cls[builder]
+
             if (_true && a===true) {
                 return await me.runFunction({names:_true, _output, payload:params })
             }
             else if (_false && a===false) {
                 return await me.runFunction({names:_false, _output, payload:params })
             }
+            if (_id) {
+                a = { [_id]: a}
+            }
             params = Flow.buildOutput(a, params, _output, name)
             return await me.runFunction({names:_then, _output, payload:params})
         }
 
-        // name://factory/[builder_|method]?params
+        // name://factory/[builder_|method|property]?params
         //
         let callback = _call
             ? async (x) => await me.runFunction({names:_call, _output, payload:x})
@@ -136,6 +142,10 @@ class Flow {
 
         let buildType = _type
             || (builder.slice(-1)=='_' ? 'builder' : 'method')
+
+        if (typeof cls[builder] !== 'function') {
+            buildType = 'property'
+        }
 
         let func
         switch(buildType) {
@@ -145,8 +155,11 @@ class Flow {
             case 'method':
                 func = async (payload) => await cls[builder](Object.assign({}, params, payload), callback)
                 break
+            case 'property':
+                func = async () => await cls[builder]
+                break
         }
-        if (!func) throw "unable to create function for " + _type + " builder type"
+        if (!func) throw "cant build " + factory + "." + builder + " as " + buildType
 
         me.functions[name] = async payload => {
 
