@@ -11,36 +11,7 @@ class Flow {
         me.libLoader = libLoader
         me.factories = factories
         me.functions = Object.assign({
-            // run:///log?a=2
-            //
-            log: (p) => console.log(p),
-
-            // log-x:///log_?prefix=x
-            //
-            log_: ({prefix}) => ((x) => console.log(prefix, x || '')),
-
-            // sub:///timeout?ms=10&value=y&_call=log-x
-            //
-            timeout:({ms, value}, callback) => {
-                setTimeout(() => callback(value), ms)
-            },
-
-            // > print-named-timeout:///log_?prefix=named-timeout
-            // > named-timeout://test/timeout_?ms=100&value.a=2&value.b=3&_call=print-named-timeout
-            // > run://named-timeout
-            //
-            timeout_: ({ms,value}, callback) => {
-                return async () => {
-                    setTimeout(() => callback(value), ms)
-                }
-            },
-
-            // > my-var:///var_?a=12&b=12
-            //
-            var_: (params) => (payload) => Object.assign({}, params, payload),
-
             END: async (p) => await me.end(p)
-
         }, functions)
         me.onEnd = onEnd
     }

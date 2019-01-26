@@ -34,10 +34,50 @@ program.library.concat('.').forEach((p) => {
     module.paths.push(path.join(cd, './node_modules'))
 })
 
+let functions = {
+    // run:///log?a=2
+    //
+    log: (p) => console.log(p),
+
+    // log-x:///log_?prefix=x
+    //
+    log_: ({prefix}) => ((x) => console.log(prefix, x || '')),
+
+    // sub:///timeout?ms=10&value=y&_call=log-x
+    //
+    timeout:({ms, value}, callback) => {
+        setTimeout(() => callback(value), ms)
+    },
+
+    // > print-named-timeout:///log_?prefix=named-timeout
+    // > named-timeout://test/timeout_?ms=100&value.a=2&value.b=3&_call=print-named-timeout
+    // > run://named-timeout
+    //
+    timeout_: ({ms,value}, callback) => {
+        return async () => {
+            setTimeout(() => callback(value), ms)
+        }
+    },
+
+    // > my-string:///str_?names=name&template=hello ${name}
+    // > run://my-string,log?name=world
+    //
+    str_: ({template,names}) => {
+        let a = ['return `' + template + '`']
+        if (names) a.unshift('{' + names + '}={}')
+        let fn = new Function(...a)
+        return (payload) => fn.call(payload, payload)
+    },
+
+    // > my-var:///var_?a=12&b=12
+    //
+    var_: (params) => (payload) => Object.assign({}, params, payload),
+}
 
 let library = {}
 const flow = new Flow({
     library,
+    functions,
     libLoader: loadLibrary,
     onEnd: () => process.exit()
 })
