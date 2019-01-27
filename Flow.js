@@ -1,18 +1,10 @@
 class Flow {
     constructor({
-        factories = {},
-        functions = {},
-        library = typeof(global) !=='undefined' ? global : window,
-        libLoader = () => undefined,
+        functions = typeof(global) !=='undefined' ? global : window,
         onEnd = () => undefined
     } = {}) {
         let me = this
-        me.library = library
-        me.libLoader = libLoader
-        me.factories = factories
-        me.functions = Object.assign({
-            END: async (p) => await me.end(p)
-        }, functions)
+        me.functions = functions
         me.onEnd = onEnd
     }
 
@@ -27,161 +19,200 @@ class Flow {
                 }
             })
             .filter(Boolean)
-
         for (const arg of args) {
             await me.build(arg)
         }
     }
 
+
     async build({
         name,
         factory,
-        builder,
         params,
-        _type, // builder_|method
         _call,
         _then,
         _true,
         _false,
         _output = 'replace',
-        _id
+        _name
     }) {
-        let me = this
+        let me = this, lib = me.functions
 
-        switch(name) {
-            // new://name/Class? params
-            // new://name/Class/method|builder_?params
-            //
-            case "new":
-                return me.newFactory({name:factory, params, builder})
+        // $params replacements
+        //
+        for (let p in params) {
+            let v = params[p]
+            if (v=='' && p[0]=='$' && lib[p.slice(1)]) {
+                delete params[p]
+                Object.assign(params, await lib[p.slice(1)]())
+                continue
+            }
 
-            // lib://name?path|name=
-            // lib://?path=
-            //
-            case "lib":
-                let path = params.path || params.name
-                if (!path) throw "library path not found"
-
-                for (const p of path.split(',')) {
-                    let a = await me.libLoader(p)
-
-                    // if loads an .md file
-                    if (!a && !factory) continue
-
-                    if (!a) throw "library " + p + " not found"
-                    let name = factory || p.split('/').pop()
-                    me.library[name] = a
-                }
-                return
-
-            // def://name/names,..?params
-            //
-            case "def":
-                me.functions[factory] = async (payload) => await me.runFunction({
-                    names: builder,
-                    payload: Object.assign(params || {}, payload),
-                    _output, _then, _true, _false})
-                return
-
-            // run://name,..?params
-            //
-            case "run":
-                if (builder) break
-
-                return await me.runFunction({
-                    names:factory, payload:params, _output, _then, _true, _false})
-
-            // end://
-            //
-            case "end":
-                return await me.end(params)
+            if (typeof v == 'string' && v[0]=='$' && lib[v.slice(1)]) {
+                params[p] = await lib[v.slice(1)]()
+                continue
+            }
         }
 
-        if (!builder) throw "builder is required"
-
-        let cls = !factory
-            ? me.functions
-            : (me.library[factory] || me.factories[factory])
-        if (!cls) throw "factory " + factory + " not found"
-
-        let a = cls[builder]
-        if (!a) throw "function " + factory + "." + builder + " not found"
-
-        // sub://factory/method?params&_call
+        // existing://? -- run command
         //
-        if (name=='sub') {
-            let cb = async (x) => await me.runFunction({names:_call, payload:x})
-            return await cls[builder](params, cb)
+        let isNameExist = name!=='run' && lib.hasOwnProperty(name)
+        if (isNameExist) {
+            return await me.run({names:name, payload:params, _call, _output, _then, _true, _false})
         }
 
-        // run://factory/method|builder|property?params
+        // new-name://?params -- saving params as variable
         //
-        if (name=='run') {
-            let a = typeof(cls[builder]) =='function'
-                ? await cls[builder](params)
-                : await cls[builder]
-
-            if (_true && a===true) {
-                return await me.runFunction({names:_true, _output, payload:params })
-            }
-            else if (_false && a===false) {
-                return await me.runFunction({names:_false, _output, payload:params })
-            }
-            if (_id) {
-                a = { [_id]: a}
-            }
-            params = Flow.buildOutput(a, params, _output, name)
-            return await me.runFunction({names:_then, _output, payload:params})
+        if (!factory) {
+            if (name=='run') throw 'run is a reserved name'
+            lib[name] = async () => await params
+            return
         }
 
-        // name://factory/[builder_|method|property]?params
+
+        // new-name|run://existing,existing,existing -- runs and store value
         //
+        let names = factory.split(',')
+        names.forEach(me.has.bind(me))
+        if (names.length>1) {
+            let a =  await me.run({names:factory, payload:params, _call, _output, _then, _true, _false})
+            if (name!=='run') {
+                lib[name] = async () => await a
+            }
+            return
+        }
+
+        let [cls_name, fn_name] = me.has(factory)
+        let cls = lib[cls_name]
+
+
+        let isClass = cls_name[0].toLowerCase()!=cls_name[0]
+
+        // new-name://Class?a=12  -- creates a new class
+        //
+        if (isClass && !fn_name) {
+            let a = await new cls(params)
+            if (name!=='run') {
+                lib[name] = a
+            }
+            return
+        }
+
+        // new-name://Class.method
+        // new-name://class.method
+        // new-name://method_        -- usually builder or an alias
+        //
+        if (!fn_name) {
+            fn_name = cls_name
+            cls = lib
+        }
+
         let callback = _call
-            ? async (x) => await me.runFunction({names:_call, _output, payload:x})
+            ? async (x) => await me.run({names:_call, _output, payload:x})
             : null
 
-        let buildType = _type
-            || (builder.slice(-1)=='_' ? 'builder' : 'method')
-
-        if (typeof cls[builder] !== 'function') {
-            buildType = 'property'
+        let newFn
+        // a property
+        if (typeof cls[fn_name] !== 'function') {
+            newFn = async () => await cls[fn_name]
         }
-
-        let func
-        switch(buildType) {
-            case 'builder':
-                func = await cls[builder](params, callback)
-                break
-            case 'method':
-                func = async (payload) => await cls[builder](Object.assign({}, params, payload), callback)
-                break
-            case 'property':
-                func = async () => await cls[builder]
-                break
+        // a builder
+        else if (fn_name.slice(-1)=='_') {
+            newFn = await cls[fn_name](params, callback)
         }
-        if (!func) throw "cant build " + factory + "." + builder + " as " + buildType
+        // a method
+        else {
+            newFn = async (payload) => await cls[fn_name](Object.assign({}, params, payload), callback)
+        }
+        if (!newFn) throw "cant build " + name + " function"
 
-        me.functions[name] = async payload => {
-
-            let a = await func(payload, callback)
+        let Fn = async (payload, cb) => {
+            let a = await newFn(payload, cb || callback)
 
             if (_true && a===true) {
-                return await me.runFunction({names:_true, _output, payload })
+                return await me.run({names:_true, _output, payload })
             }
             else if (_false && a===false) {
-                return await me.runFunction({names:_false, _output, payload })
+                return await me.run({names:_false, _output, payload })
             }
 
-            if (_id) {
-                a = { [_id]: a}
+            if (_name) {
+                a = { [_name]: a}
             }
 
-            payload = Flow.buildOutput(a, payload, _output, name)
-            return await me.runFunction({names:_then, _output, payload})
+            payload = Flow.buildPayload(a, payload, _output, name)
+            return await me.run({names:_then, _output, payload})
+        }
+
+        if (name!=='run') {
+            lib[name] = Fn
+        } else {
+            Fn(params, callback)
         }
     }
 
-    static buildOutput(value, payload = {}, _output='replace', name='') {
+    has(factory) {
+        let me = this, lib = me.functions
+        let [cls_name, fn_name] = factory.split('.')
+        let cls = lib[cls_name]
+
+        if (!cls) throw "unable to find " + cls_name
+        if (fn_name && !cls[fn_name]) throw "unable to find " + cls_name + "." + fn_name
+
+        return [cls_name, fn_name]
+    }
+
+
+    async run({names, payload, _call, _output, _then, _true, _false}) {
+        let me = this, lib = me.functions
+        if (!names) return payload
+
+        let callback = _call
+            ? async (x) => await me.run({names:_call, _output, payload:x})
+            : null
+
+        for(const name of names.split(',')) {
+            let func = lib[name]
+            if (!func) throw "run " + name + " not found"
+
+            var a = await func(payload, callback)
+            if (a==undefined) {
+                if (payload) delete payload['.']
+                continue
+            }
+
+            if (_true && a===true) {
+                a = await me.run({names:_true, _output, payload })
+            }
+            else if (_false && a===false) {
+                a = await me.run({names:_false, _output, payload })
+            }
+
+            payload = Flow.buildPayload(a, payload, _output, name)
+            payload = await me.run({names:_then, _output, payload})
+        }
+
+        return payload
+    }
+
+    async end(params) {
+        let me = this, lib = me.functions
+        if (me.ended) return
+        me.ended = true
+
+        let funcs = Object.values(lib)
+            .filter(fn => fn && typeof fn.end == 'function')
+            .map(fn => (async () => await fn.end(params))())
+
+        await Promise.all(funcs)
+
+        me.functions = null
+
+        await me.onEnd(params)
+    }
+
+
+    static buildPayload(value, payload = {}, _output='replace', name='') {
         switch(_output) {
             case 'named':
                 payload = Object.assign({ [name]:value }, payload)
@@ -194,76 +225,18 @@ class Flow {
                 payload = value
                 break
         }
+
         if (payload) {
             delete payload['.']
         }
         return payload
     }
 
-    async newFactory({name, params, builder}) {
-        let me = this
-        if (!name) throw "name is required to load a library"
-
-        let [lib, fn]  = builder.split('/')
-
-        let Cls = me.library[lib]
-        if (!Cls) throw "library " + lib + " not found"
-
-        if (fn && !Cls[fn]) throw "static function " + lib + "." + fn + " not found"
-
-        let a = await (fn ? Cls[fn](params) : new Cls(params))
-        me.factories[name] = a
-
-        return a
-    }
-
-    async runFunction({names, payload, _output, _then, _true, _false}) {
-        let me = this
-        if (!names) return payload
-
-        for(const name of names.split(',')) {
-            let func = me.functions[name]
-            if (!func) throw "run " + name + " not found"
-
-            var a = await func(payload)
-            if (a==undefined) continue
-
-            if (_true && a===true) {
-                a = await me.runFunction({names:_true, _output, payload })
-            }
-            else if (_false && a===false) {
-                a = await me.runFunction({names:_false, _output, payload })
-            }
-
-            payload = Flow.buildOutput(a, payload, _output, name)
-            payload = await me.runFunction({names:_then, _output, payload})
-        }
-
-        return payload
-    }
-
-    async end(params) {
-        let me = this
-        if (me.ended) return
-        me.ended = true
-
-        let funcs = Object.values(me.factories)
-            .filter(factory => factory && typeof factory.end == 'function')
-            .map(factory => (async () => await factory.end(params))())
-
-        await Promise.all(funcs)
-
-        // release resources
-        me.functions = null
-        me.factories = null
-        me.library = null
-
-        await me.onEnd(params)
-    }
-
     static parse(arg) {
         let url = new URL(arg)
 
+        // ensure case
+        //
         let n = url.protocol.length
         let name = arg.slice(0, n)
             .match(new RegExp(url.protocol, 'i'))
@@ -276,8 +249,7 @@ class Flow {
 
         let a = {
             name,
-            factory,
-            builder: url.pathname
+            factory
         }
 
         // browser URL takes only valid protocols
@@ -286,11 +258,8 @@ class Flow {
             let p = url.pathname
             let h = p.match(/\/\/[\w\.\,-]+/ig)
             h = h && h[0] || ''
-            a.builder = p.replace(h,'')
             a.factory = h.replace('//', '')
         }
-
-        a.builder = a.builder.replace('/','')
 
         let params = {}
         for (let a of (new URLSearchParams(url.search).entries())) {
@@ -346,8 +315,11 @@ class Flow {
             return false
         }
     }
+
 }
+
 
 if (typeof exports === 'object' && typeof module === 'object') {
     module.exports = Flow
 }
+

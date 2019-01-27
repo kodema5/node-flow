@@ -35,50 +35,49 @@ program.library.concat('.').forEach((p) => {
 })
 
 let functions = {
-    // run:///log?a=2
-    //
+
+    lib: ({path}) => {
+        path.split(',').map( (p) => {
+            let a = loadLibrary(p)
+            if (!a) return
+
+            let fn = p.split('/').pop()
+            let n = fn.split('.')[0]
+            functions[n] = a
+        })
+    },
+
     log: (p) => console.log(p),
 
-    // log-x:///log_?prefix=x
-    //
-    log_: ({prefix}) => ((x) => console.log(prefix, x || '')),
+    log_: ({prefix}) => (x) => console.log(prefix, x),
 
-    // sub:///timeout?ms=10&value=y&_call=log-x
-    //
     timeout:({ms, value}, callback) => {
         setTimeout(() => callback(value), ms)
     },
 
-    // > print-named-timeout:///log_?prefix=named-timeout
-    // > named-timeout://test/timeout_?ms=100&value.a=2&value.b=3&_call=print-named-timeout
-    // > run://named-timeout
-    //
     timeout_: ({ms,value}, callback) => {
         return async () => {
             setTimeout(() => callback(value), ms)
         }
     },
 
-    // > my-string:///str_?names=name&template=hello ${name}
-    // > run://my-string,log?name=world
+    // only in node-js, FF prohibit this
     //
     str_: ({template,names}) => {
         let a = ['return `' + template + '`']
         if (names) a.unshift('{' + names + '}={}')
+
         let fn = new Function(...a)
         return (payload) => fn.call(payload, payload)
     },
 
-    // > my-var:///var_?a=12&b=12
-    //
     var_: (params) => (payload) => Object.assign({}, params, payload),
+
+    END: async (p) => await flow.end(p)
 }
 
-let library = {}
 const flow = new Flow({
-    library,
     functions,
-    libLoader: loadLibrary,
     onEnd: () => process.exit()
 })
 
@@ -117,8 +116,9 @@ program.file.forEach((p) => {
 
     let fn = p.split('/').pop()
     let n = fn.split('.')[0]
-    library[n] = a
+    functions[n] = a
 })
+
 
 flow.def.apply(flow, program.args)
     .catch(x => console.log(x))

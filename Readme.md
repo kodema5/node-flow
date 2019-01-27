@@ -1,8 +1,8 @@
 # node-flow
 
-node-flow uses URLs to name functions, which then can be sequentially called (a flow)
+node-flow uses URLs to name and store functions, a parameters/payload is then piped through a sequence of functions (flow)
 
-## install
+# install
 
 * clone this repository ```git clone https://github.com/kodema5/node-flow.git```
 * install as global ```npm install -g ./node-flow``` then ```node-flow -h```
@@ -21,241 +21,156 @@ Options:
 More documentation can be found at https://github.com/kodema5/node-flow/
 ```
 
-## url format
+# synopsis
+
+* all are stored in a map as a function
+* run is reserved word
+* a name is defined by a URL as below
 
 ```
-node-flow reuses URL, protocol://host/path?queryString as
+    name://[factory[.property]]?[params][.volatile][_flags]
 
-    [name|cmd]://[Class|class]/[builder|method]?[params][&flags]
+    name can be existing or new-name
+    when existing, it will be called
 
-where:
+    factory refers to existing name
+    Factory, with first uppercase, indicates a Class will be called with new
+    factory.builder_, with a postfix_ will be called
+    factory.method/property, will be wrapped in a function
 
-    [name|cmd]:
-        name:                           name of definition (use 3+ chars)
-        new://name/Class                creates a new factory
-        new://name/Class/method         calls static method for new factory
-        lib://Name?name|path=           loads library or file
-        def://name/name,...             combines functions into a new name
-        run://name,...?payload          runs name in chain
-        sub://name/method?_then         subscribe a callback to a method
-        end://?params                   calls factory.end with params and exit
+    params parsed from from query-string
+    a=1&a=2                         { a: [1, 2] }
+    a=1&b=2                         { a: 1, b: 2 }
+    a.b=1&a.b=2                     { a: { b: [1, 2] } }
 
-    [Class|class]
-        Class                           factory class
-        class                           factory instance
+    _* are reserved for flags
+    .* params will not be passed to next in chain
 
-    [builder_|method]
-        builder_                        calls builder_ that returns a function
-        method                          binds to factory method
+    _flags will be reserved for flow
+    _then=name,...                  to be chain executed next
+    _true=name,...                  to be executed if result is true
+    _false=name,...                 to be executed if result is false
+    _call=name,...                  to be passed as a callback
+    _name=name                        to wrap output as { [_name]: output }
+    _output=replace|merged|named    on how payload to be passed in chain
+                                    (default: replace)
 
-        when "_" postfixed, it is assume a builder_.
-
-    params: parsed parameters from query-string
-        a=1&a=2                         { a: [1, 2] }
-        a=1&b=2                         { a: 1, b: 2 }
-        a.b=1&a.b=2                     { a: { b: [1, 2] } }
-
-        _* are reserved for flags
-        .* params will not be passed to next in chain
-
-    flags:
-        _type=method|builder            to override builder's type
-        _then=name,...                  to be chain executed next
-        _true=name,...                  to be executed if result is true
-        _false=name,...                 to be executed if result is false
-        _call=name,...                  to be passed as a callback
-        _id=name                        to wrap output as { [_id]: output }
-        _output=replace|merged|named    on how payload to be passed in chain
-                                        (default: replace)
 ```
 
-# common functions
+**an existing name cant be redefined, as it is already a function and will be called instead**
 
-to be accessed when no factory supplied, ex: run:///log?a=hello-world
+## named functions
 
+```
+    lib(path|name)                      loads various library
     log(payload)                        console.log
     log_({prefix})(payload)             console.log(prefix, payload)
     timeout({ms,value}, _call)          setTimeout(_call(value), ms)
     timeout_({ms,value}, _call)         () => setTimeout(_call(value), ms)
     str_({template,names})              returns a string template
-    var_(params)(payload)               returns {} || params || payload
+    var_(params)                        returns a merged params and payload
     END                                 calls end()
+
+```
 
 # usage
 
-node-flow scans for lines preceded with >, to run this file ... (yup it can be a .md file :D)
+## variables and $parameters replacements
 
-    node node-flow.js -f Readme.md
+> my-var://?a=1
 
----
+stores parameters as variable
 
-for loading library, naming functions and creating a function chain
+> log://?$my-var&b=2
 
-> lib://Test?path=./Readme
+directly calls log with including stored-variable,
+{ b: 2, a: 1 }
 
-load Readme.js named Test, can use path=.. or name=... that will be passed to require(..).
+> log://?c=$my-var&b=2
 
-> new://test/Test?a=test
+calls log with stored-variable as c,
+{ c: { a: 1 }, b: 2 }
 
-creates a new instance Test named tst1
-
-> new://test2/Test/init_?a=test2
-
-calls a static Test.init_ static function for async initiation
-
-> run:///log?text=hello-world
-
-run log with {text: 'hello-world'}
-
-> print:///log
+> my-var//?b=2
 \
-> run://print?text=hello-world
+> log://?$my-var&c=3
 
-reference log method as print, to be run as below
+**beware redefining my-var (an existing) won't work!** \
+my-var is a function that returns { a:1 }.
+the above returns { c: 3, a: 1 }
 
-> print-with-hello:///log_?prefix=hello
+## passing payload
 
-log_ is a builder that returns a function
+> my-var-a://log,log?a=1&.b=2
 
-> run://print-with-hello?text=world
+.params is passed to first in chain only.
+{ a: 1, '.': { b: 2 } } is pass to first log,
+{.} will be erased, { a: 1 } to the second log.
+the last payload is stored in my-var-a
 
-the above returns hello {text:'world'}
-
-> run://print,print-with-hello?text=world
-
-runs both of print and print-with-hello
-
-> def://print-all/print,print-with-hello
-
-def, creates an alias
-
-> run://print-all?text=world2
-
----
-
-subscribing to an event/passing a callback
-
-> print-event:///log_?prefix=an event
+> my-var-b://?b=2
 \
-> sub:///timeout?ms=100&value.a=1&value.b=2&_call=print-event
+> run://my-var-a,my-var-b,log
 
-subscribes to an event with a callback in _call
+by default is a 'replace' operation, {b:2}
 
-> print-named-event:///log_?prefix=named-event
+> run://my-var-a,my-var-b,log?_output=merge
+
+with 'merge' output: {a:1, b:2}
+
+> run://my-var-a,my-var-b,log?_output=named
+
+with 'named' output: { 'my-var-b': { b: 2 }, 'my-var-a': { a: 1 } }
+
+## a builder_ is postfixed with _
+
+> log-hello://log_?prefix=hello
 \
-> named-event:///timeout_?ms=100&value.a=2&value.b=3&_call=print-named-event
-\
-> run://named-event
+> log-hello://?$my-var&text=world
 
-registers a named-event with a callback
+for a function that requires initialization,
+log_ is a method with postfixed with _,
+returns hello { text: 'world', a: 1 }
 
----
+## loading, creating and accessing properties of instance of Class
 
-lets take a look on how to branch a flow
+> lib://?path=Readme.js
+\
+> test://Readme?a=1
 
->  print-equ:///log_?prefix=equal
+creates a new instance of a class
+
+> test-a://test.a?_name=test_a_value
 \
->  print-ne:///log_?prefix=not equal
+> run://test-a,log
+
+_name is provided to wrap a scalar property in payload.
+returns { test_a_value: 1 }
+
+
+## branch _true, _false, _then in flow
+
+>  print-equ://log_?prefix=equal
 \
->  print-done:///log_?prefix=done
+>  print-ne://log_?prefix=not equal
 \
-> is-1://test/is_a_equ_b_?a=1
+>  print-done://log_?prefix=done
+\
+> is-1://test.is_a_equ_b_?a=1
 
 is-1 compares payload a and b
 
-> run://is-1?b=1&_true=print-equ&_false=print-ne&_then=print-done
+> is-1://?b=1&_true=print-equ&_false=print-ne&_then=print-done
 
 flow goes to _true then to _then
 
-> run://is-1?b=2&_true=print-equ&_false=print-ne&_then=print-done
+> is-1://?b=2&_true=print-equ&_false=print-ne&_then=print-done
 
 flow goes to _false then to _then
 
----
-params and output to a function.
+## passing a _call callback and END
 
-> my-var:///var_?a=1&b=2
-\
-> run://my-var,log
+> timeout://?ms=1000&_call=print-done,END
 
-var_ accepts params and returns it when called. returns { a:1, b:2 }
-
-> my-var:///var_?a=1&.b=2
-\
-> run://my-var,log
-
-.params, params started with '.', is to facility function internal parameters,
-they passed to function as: { a:1, '.': { b:2 }}.
-it will not be passed to next function.
-the above returns { a: 1 }
-
-> my-var:///var_?a=1&_id=my
-\
-> run://my-var,log
-
-_id to facilitate function that returns a raw value to be identified in the payload.
-the above returns { my: { a: 1 }}
-
----
-
-passing payload in the flow.
-
-> print-output:///log_?prefix=payload
-\
-> inc-a-by-1://test/inc_key_by_?key=a&value=1
-
-returns {a: payload.a + 1}
-
-> inc-b-by-1://test/inc_key_by_?key=b&value=1
-
-returns {b: payload.b + 1}
-
-> run://inc-a-by-1,inc-b-by-1,print-output?a=1&b=1&_output=replace
-
-_output=replace returns the last operation's {b:1}, this is default behavior
-
-> run://inc-a-by-1,inc-b-by-1,print-output?a=1&b=1&_output=merge
-
-_output=merge combines operations' result {a:2, b:2}
-
-> run://inc-a-by-1,inc-b-by-1,print-output?a=1&b=1&_output=named
-
-_output=named adds to payload each results of named function,
-{ 'inc-b-by-1': { b: 2 }, 'inc-a-by-1': { a: 2 }, a: 1, b: 1 }
-
----
-
-ending flow
-
-> print-end:///log_?prefix=end
-\
-> sub:///timeout?ms=1000&_call=print-end,END
-
-when END is in the flow, all instance's end function (if-exist) will be called,
-and program terminates
-
----
-
-for interactive development (default)
-
-    node-flow -f Readme.js -i
-    > lib://Test?path=Readme.js
-    > new://test/Test?a=test
-    Test.constructor test
-    > inc-a-by-1://test/inc_key_by_?key=a&value=1
-    > .list
-    library:
-        Test
-    factories:
-        test
-    functions:
-        END
-        inc-a-by-1
-        log
-        log_
-        timeout
-        timeout_
-    > run://inc-a-by-1?a=2&_then=log
-    { a: 3 }
-    > .exit
-    --ending test
+some functions may need a callback _call,
+and END terminates function
