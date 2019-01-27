@@ -174,3 +174,20 @@ flow goes to _false then to _then
 
 some functions may need a callback _call,
 and END terminates function
+
+## for interactive development (default)
+
+    node-flow -f Readme.js -i
+    > lib://?path=Readme.js
+    > test://Readme?a=test
+    Test.constructor test
+    > inc-a-by-1://test.inc_key_by_?key=a&value=1
+    > .list
+
+     END, Readme, inc-a-by-1, lib, log, log_, str_, test, timeout, timeout_, var_
+
+    > run://inc-a-by-1?a=2&_then=log
+    { a: 3 }
+    > .exit
+    --ending test
+
