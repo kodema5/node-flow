@@ -152,21 +152,18 @@ class Flow {
 
     has(factory) {
         let me = this
-        var cls = me.functions
         let names = factory.split('.')
         let fn = names.pop()
 
-        var isClass = factory[0].toLowerCase()!=factory[0]
-
+        var cls = me.functions
         names.forEach((n) => {
             if (!cls[n]) throw "unrecognized name " + factory
-
             cls = cls[n]
-            isClass = n[0].toLowerCase()!=n[0]
         })
 
         if (cls[fn]==undefined) throw "unrecognized name " + factory
 
+        let isClass = fn[0].toLowerCase()!=fn[0]
         return [cls, fn, isClass]
     }
 
