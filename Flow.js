@@ -165,7 +165,7 @@ class Flow {
             isClass = n[0].toLowerCase()!=n[0]
         })
 
-        if (cls[fn]==undefined) throw "unrecognized name -2 " + factory
+        if (cls[fn]==undefined) throw "unrecognized name " + factory
 
         return [cls, fn, isClass]
     }
