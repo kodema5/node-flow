@@ -24,7 +24,6 @@ class Flow {
         }
     }
 
-
     async build({
         name,
         factory,
@@ -38,21 +37,31 @@ class Flow {
     }) {
         let me = this, lib = me.functions
 
-        // $params replacements
+        // $params replacements and !params
         //
         for (let p in params) {
             let v = params[p]
-            if (v=='' && p[0]=='$' && lib[p.slice(1)]) {
+
+            // $p
+            if (v=='' && (p[0]=='$' || p[0]=='!')) {
+                let [cls, fn] = me.has(p.slice(1))
+
+                let f = v[0]=='$'
                 delete params[p]
-                Object.assign(params, await lib[p.slice(1)]())
+                Object.assign(params, f ? await cls[fn]() : cls[fn])
                 continue
             }
 
-            if (typeof v == 'string' && v[0]=='$' && lib[v.slice(1)]) {
-                params[p] = await lib[v.slice(1)]()
+            // p=$v
+            if (typeof v == 'string' && (v[0]=='$' || v[0]=='!')) {
+                let [cls, fn] = me.has(v.slice(1))
+
+                let f = v[0]=='$'
+                params[p] = f ? await cls[fn]() : cls[fn]
                 continue
             }
         }
+
 
         // existing://? -- run command
         //
@@ -69,7 +78,6 @@ class Flow {
             return
         }
 
-
         // new-name|run://existing,existing,existing -- runs and store value
         //
         let names = factory.split(',')
@@ -82,16 +90,12 @@ class Flow {
             return
         }
 
-        let [cls_name, fn_name] = me.has(factory)
-        let cls = lib[cls_name]
-
-
-        let isClass = cls_name[0].toLowerCase()!=cls_name[0]
+        let [cls, fn_name, isClass] = me.has(factory)
 
         // new-name://Class?a=12  -- creates a new class
         //
-        if (isClass && !fn_name) {
-            let a = await new cls(params)
+        if (isClass) {
+            let a = await new cls[fn_name](params)
             if (name!=='run') {
                 lib[name] = a
             }
@@ -102,11 +106,6 @@ class Flow {
         // new-name://class.method
         // new-name://method_        -- usually builder or an alias
         //
-        if (!fn_name) {
-            fn_name = cls_name
-            cls = lib
-        }
-
         let callback = _call
             ? async (x) => await me.run({names:_call, _output, payload:x})
             : null
@@ -152,14 +151,23 @@ class Flow {
     }
 
     has(factory) {
-        let me = this, lib = me.functions
-        let [cls_name, fn_name] = factory.split('.')
-        let cls = lib[cls_name]
+        let me = this
+        var cls = me.functions
+        let names = factory.split('.')
+        let fn = names.pop()
 
-        if (!cls) throw "unable to find " + cls_name
-        if (fn_name && !cls[fn_name]) throw "unable to find " + cls_name + "." + fn_name
+        var isClass = factory[0].toLowerCase()!=factory[0]
 
-        return [cls_name, fn_name]
+        names.forEach((n) => {
+            if (!cls[n]) throw "unrecognized name " + factory
+
+            cls = cls[n]
+            isClass = n[0].toLowerCase()!=n[0]
+        })
+
+        if (cls[fn]==undefined) throw "unrecognized name -2 " + factory
+
+        return [cls, fn, isClass]
     }
 
 
@@ -173,13 +181,7 @@ class Flow {
 
         for(const name of names.split(',')) {
 
-            let [cls_name, fn_name] = me.has(name)
-            let cls = lib[cls_name]
-
-            if (!fn_name) {
-                fn_name = cls_name
-                cls = lib
-            }
+            let [cls, fn_name] = me.has(name)
 
             let a
             if (typeof cls[fn_name] !== 'function') {

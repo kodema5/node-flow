@@ -102,15 +102,11 @@ the above returns { c: 3, a: 1 }
 
 > del://?names=my-var
 \
-> log://?$my-var
-
-in such, first is to delete my-var, since not found, it returns: { '$my-var': '' }
-
 > my-var://?a=2
 \
 > log://?$my-var
 
-then redefine it if needed. { a: 2 }
+in such, first is to delete my-var, then redefine it if needed. { a: 2 }
 
 ## passing payload
 
@@ -154,6 +150,11 @@ returns hello { text: 'world', a: 1 }
 > test://Readme?a=1
 
 creates a new instance of a class
+
+
+> log://?test_dot_a=!test.a
+
+one can access property directly with "!" prefix { test_dot_a: 1 }
 
 > test-a://test.a?_name=test_a_value
 \
