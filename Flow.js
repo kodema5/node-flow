@@ -58,7 +58,7 @@ class Flow {
         //
         let isNameExist = name!=='run' && lib.hasOwnProperty(name)
         if (isNameExist) {
-            return await me.run({names:name, payload:params, _call, _output, _then, _true, _false})
+            return await me.run({names:name, payload:params, _call, _output, _then, _true, _false, _name})
         }
 
         // new-name://?params -- saving params as variable
@@ -75,7 +75,7 @@ class Flow {
         let names = factory.split(',')
         names.forEach(me.has.bind(me))
         if (names.length>1) {
-            let a =  await me.run({names:factory, payload:params, _call, _output, _then, _true, _false})
+            let a =  await me.run({names:factory, payload:params, _call, _output, _then, _true, _false, _name})
             if (name!=='run') {
                 lib[name] = async () => await a
             }
@@ -163,7 +163,7 @@ class Flow {
     }
 
 
-    async run({names, payload, _call, _output, _then, _true, _false}) {
+    async run({names, payload, _call, _output, _then, _true, _false, _name}) {
         let me = this, lib = me.functions
         if (!names) return payload
 
@@ -172,12 +172,28 @@ class Flow {
             : null
 
         for(const name of names.split(',')) {
-            let func = lib[name]
-            if (!func) throw "run " + name + " not found"
 
-            var a = await func(payload, callback)
+            let [cls_name, fn_name] = me.has(name)
+            let cls = lib[cls_name]
+
+            if (!fn_name) {
+                fn_name = cls_name
+                cls = lib
+            }
+
+            let a
+            if (typeof cls[fn_name] !== 'function') {
+                a = await cls[fn_name]
+            }
+            else {
+                a = await cls[fn_name](payload, callback)
+            }
+
+            // var a = await cls[fn_name](payload, callback)
             if (a==undefined) {
-                if (payload) delete payload['.']
+                if (payload) {
+                    delete payload['.']
+                }
                 continue
             }
 
@@ -190,6 +206,10 @@ class Flow {
 
             payload = Flow.buildPayload(a, payload, _output, name)
             payload = await me.run({names:_then, _output, payload})
+
+            if (_name) {
+                payload = { [_name]: payload}
+            }
         }
 
         return payload
@@ -212,17 +232,17 @@ class Flow {
     }
 
 
-    static buildPayload(value, payload = {}, _output='replace', name='') {
+    static buildPayload(value, payload = {}, _output='merge', name='') {
         switch(_output) {
+            case 'replace':
+                payload = value
+                break
             case 'named':
                 payload = Object.assign({ [name]:value }, payload)
                 break
             case 'merge':
-                payload = Object.assign({}, payload, value)
-                break
-            case 'replace':
             default:
-                payload = value
+                payload = Object.assign({}, payload, value)
                 break
         }
 

@@ -47,6 +47,18 @@ let functions = {
         })
     },
 
+    del: async ({names}) => {
+        names.split(',').forEach(async (n) => {
+            let fn = functions[n]
+            if (!fn) return
+
+            if (typeof fn.end == 'function') {
+                await fn.end()
+            }
+            delete functions[n]
+        })
+    },
+
     log: (p) => console.log(p),
 
     log_: ({prefix}) => (x) => console.log(prefix, x),

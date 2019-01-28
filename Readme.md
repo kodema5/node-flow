@@ -51,9 +51,9 @@ More documentation can be found at https://github.com/kodema5/node-flow/
     _true=name,...                  to be executed if result is true
     _false=name,...                 to be executed if result is false
     _call=name,...                  to be passed as a callback
-    _name=name                        to wrap output as { [_name]: output }
-    _output=replace|merged|named    on how payload to be passed in chain
-                                    (default: replace)
+    _name=name                      to wrap output as { [_name]: output }
+    _output=merge|replace|named     on how payload to be passed in chain
+                                    (default: merge)
 
 ```
 
@@ -69,6 +69,7 @@ More documentation can be found at https://github.com/kodema5/node-flow/
     timeout_({ms,value}, _call)         () => setTimeout(_call(value), ms)
     str_({template,names})              returns a string template
     var_(params)                        returns a merged params and payload
+    del({names})                        deletes (/ends) specified names
     END                                 calls end()
 
 ```
@@ -99,6 +100,18 @@ calls log with stored-variable as c,
 my-var is a function that returns { a:1 }.
 the above returns { c: 3, a: 1 }
 
+> del://?names=my-var
+\
+> log://?$my-var
+
+in such, first is to delete my-var, since not found, it returns: { '$my-var': '' }
+
+> my-var://?a=2
+\
+> log://?$my-var
+
+then redefine it if needed. { a: 2 }
+
 ## passing payload
 
 > my-var-a://log,log?a=1&.b=2
@@ -110,13 +123,15 @@ the last payload is stored in my-var-a
 
 > my-var-b://?b=2
 \
-> run://my-var-a,my-var-b,log
-
-by default is a 'replace' operation, {b:2}
-
 > run://my-var-a,my-var-b,log?_output=merge
 
-with 'merge' output: {a:1, b:2}
+by default, outputs are merged,
+each function can pick-up and add relevant values to payload,
+{a:1, b:2}.
+
+> run://my-var-a,my-var-b,log?_output=replace
+
+with 'replace' output, {b:2}
 
 > run://my-var-a,my-var-b,log?_output=named
 
@@ -148,6 +163,13 @@ _name is provided to wrap a scalar property in payload.
 returns { test_a_value: 1 }
 
 
+> my-result://test.add,log?a=1&b=2
+\
+> log://?x=$my-result
+
+access a method, perform addition and store to a variable. returns { x: 3 }
+
+
 ## branch _true, _false, _then in flow
 
 >  print-equ://log_?prefix=equal
@@ -175,8 +197,11 @@ flow goes to _false then to _then
 some functions may need a callback _call,
 and END terminates function
 
-## for interactive development (default)
+## for REPL
 
+for testing/development, use -i to enter REPL
+
+````
     node-flow -f Readme.js -i
     > lib://?path=Readme.js
     > test://Readme?a=test
@@ -190,4 +215,4 @@ and END terminates function
     { a: 3 }
     > .exit
     --ending test
-
+````

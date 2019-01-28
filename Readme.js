@@ -29,6 +29,10 @@ class Test {
         }
     }
 
+    add({a,b}) {
+        return a + b
+    }
+
     end() {
         return console.log('--ending', this.a)
     }
