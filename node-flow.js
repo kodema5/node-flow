@@ -59,6 +59,46 @@ let functions = {
         })
     },
 
+    // private
+    equ: function equ ({expected, actual}) {
+        let ys = Object.keys(actual)
+        let xs = Object.keys(expected)
+
+        let f = xs.filter((k) => ys.indexOf(k)<0)
+            .length > 0
+        if (f) return false
+
+        for (let i=0,n=xs.length;i<n;i++) {
+            let k = xs[i]
+            let x = expected[k]
+            let y = actual[k]
+
+            if (Array.isArray(x)) {
+                return Array.isArray(y)
+                    && equ({expected:x, actual:y})
+            }
+            else if (x instanceof Date) {
+                return (y instanceof Date)
+                    && (''+a) === (''+b)
+            }
+            else if (x instanceof Function) {
+                return (y instanceof Function)
+            }
+            else if (typeof x === 'object') {
+                if (typeof y !== 'object') return false
+                return x===expected && y===actual
+                    || equ({expected:x, actual:y})
+            }
+            else {
+                return x===y
+            }
+        }
+    },
+
+    equ_: (expected) => {
+        return (actual) => functions.equ({expected, actual})
+    },
+
     log: (p) => console.log(p),
 
     log_: ({prefix}) => (x) => console.log(prefix, x),

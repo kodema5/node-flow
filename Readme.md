@@ -70,6 +70,7 @@ More documentation can be found at https://github.com/kodema5/node-flow/
     str_({template,names})              returns a string template
     var_(params)                        returns a merged params and payload
     del({names})                        deletes (/ends) specified names
+    equ_(params)                        partial equality with payload
     END                                 calls end()
 
 ```
@@ -173,21 +174,30 @@ access a method, perform addition and store to a variable. returns { x: 3 }
 
 ## branch _true, _false, _then in flow
 
+> has-x-1://equ_?x=1
+\
+> run://has-x-1,log?
+\
+> run://has-x-1,log?a=1&x=1
+
+equ_ does a partial equal, returns true/false if specified payload has properties in expected. returns false and true
+
+
 >  print-equ://log_?prefix=equal
 \
 >  print-ne://log_?prefix=not equal
 \
 >  print-done://log_?prefix=done
 \
-> is-1://test.is_a_equ_b_?a=1
+> is-a-1://equ_?a=1
 
 is-1 compares payload a and b
 
-> is-1://?b=1&_true=print-equ&_false=print-ne&_then=print-done
+> is-a-1://?a=1&_true=print-equ&_false=print-ne&_then=print-done
 
 flow goes to _true then to _then
 
-> is-1://?b=2&_true=print-equ&_false=print-ne&_then=print-done
+> is-a-1://?a=2&_true=print-equ&_false=print-ne&_then=print-done
 
 flow goes to _false then to _then
 
@@ -203,17 +213,18 @@ and END terminates function
 for testing/development, use -i to enter REPL
 
 ````
-    node-flow -f Readme.js -i
+    node-flow
     > lib://?path=Readme.js
     > test://Readme?a=test
     Test.constructor test
     > inc-a-by-1://test.inc_key_by_?key=a&value=1
     > .list
 
-     END, Readme, inc-a-by-1, lib, log, log_, str_, test, timeout, timeout_, var_
+    END, Readme, del, equ, equ_, inc-a-by-1, lib, log, log_, str_, test, timeout, timeout_, var_
 
-    > run://inc-a-by-1?a=2&_then=log
+    > run://inc-a-by-1,log?a=2
     { a: 3 }
     > .exit
     --ending test
+
 ````
