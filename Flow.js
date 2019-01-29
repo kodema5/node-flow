@@ -92,7 +92,8 @@ class Flow {
 
         let [cls, fn_name, isClass] = me.has(factory)
 
-        // new-name://Class?a=12  -- creates a new class
+
+        // new-name://Class
         //
         if (isClass) {
             let a = await new cls[fn_name](params)
@@ -118,6 +119,12 @@ class Flow {
         // a builder
         else if (fn_name.slice(-1)=='_') {
             newFn = await cls[fn_name](params, callback)
+
+            // it returns a class
+            if (newFn.constructor === cls) {
+                lib[name] = newFn
+                return
+            }
         }
         // a method
         else {
@@ -157,11 +164,11 @@ class Flow {
 
         var cls = me.functions
         names.forEach((n) => {
-            if (!cls[n]) throw "unrecognized name " + factory
+            if (!cls[n]) throw "unknown name " + factory
             cls = cls[n]
         })
 
-        if (cls[fn]==undefined) throw "unrecognized name " + factory
+        if (cls[fn]==undefined) throw "undefined name " + factory
 
         let isClass = fn[0].toLowerCase()!=fn[0]
         return [cls, fn, isClass]

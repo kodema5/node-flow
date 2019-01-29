@@ -160,6 +160,11 @@ if (program.interactive || program.args.length==0 && program.file.length==0) {
             console.log('\n', txt, '\n')
         }
 
+        else if (a.slice(0,5) == '.show') {
+            let n = a.slice(5).trim()
+            if (n) console.log(functions[n])
+        }
+
         else if (Flow.isURL(a)) {
             await flow.def(a)
         }
