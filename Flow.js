@@ -24,6 +24,26 @@ class Flow {
         }
     }
 
+    async fixParamValue(params, key) {
+        let me = this
+        let val = params[key]
+
+        // $key
+        //
+        if (val==='' && (key[0]=='$' || key[0]=='!')) {
+            let [cls, fn] = me.has(key.slice(1))
+            delete params[key]
+            Object.assign(params, key[0]=='$' ? await cls[fn]() : cls[fn])
+        }
+
+        // key=$val
+        //
+        else if (typeof val=='string' && (val[0]=='$' || val[0]=='!')) {
+            let [cls, fn] = me.has(val.slice(1))
+            params[key] = val[0]=='$' ? await cls[fn]() : cls[fn]
+        }
+    }
+
     async build({
         name,
         factory,
@@ -40,25 +60,11 @@ class Flow {
         // $params replacements and !params
         //
         for (let p in params) {
-            let v = params[p]
-
-            // $p
-            if (v=='' && (p[0]=='$' || p[0]=='!')) {
-                let [cls, fn] = me.has(p.slice(1))
-
-                let f = v[0]=='$'
-                delete params[p]
-                Object.assign(params, f ? await cls[fn]() : cls[fn])
-                continue
-            }
-
-            // p=$v
-            if (typeof v == 'string' && (v[0]=='$' || v[0]=='!')) {
-                let [cls, fn] = me.has(v.slice(1))
-
-                let f = v[0]=='$'
-                params[p] = f ? await cls[fn]() : cls[fn]
-                continue
+            let a = params[p]
+            if (Array.isArray(a)) {
+                a.forEach( async (_,i) => await me.fixParamValue(a,i))
+            } else {
+                await me.fixParamValue(params, p)
             }
         }
 

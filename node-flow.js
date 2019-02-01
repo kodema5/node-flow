@@ -36,7 +36,8 @@ program.library.concat('.').forEach((p) => {
 
 let functions = {
 
-    lib: ({path}) => {
+    lib: ({path, name}) => {
+        path = path || name
         path.split(',').map( (p) => {
             let a = loadLibrary(p)
             if (!a) return
