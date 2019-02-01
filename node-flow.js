@@ -35,6 +35,14 @@ program.library.concat('.').forEach((p) => {
 })
 
 let functions = {
+    par: async ({names}) => {
+        let a = names.split(',')
+            .map((f) => f && typeof functions[f]=='function' && functions[f])
+            .filter(Boolean)
+            .map(f => (async () => await f())())
+        return await Promise.all(a)
+    },
+
 
     lib: ({path, name}) => {
         path = path || name

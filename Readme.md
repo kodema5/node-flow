@@ -71,6 +71,7 @@ More documentation can be found at https://github.com/kodema5/node-flow/
     var_(params)                        returns a merged params and payload
     del({names})                        deletes (/ends) specified names
     equ_(params)                        partial equality with payload
+    par({names})                        executes names in parallel
     END                                 calls end()
 
 ```

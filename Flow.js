@@ -68,7 +68,6 @@ class Flow {
             }
         }
 
-
         // existing://? -- run command
         //
         let isNameExist = name!=='run' && lib.hasOwnProperty(name)
@@ -84,7 +83,7 @@ class Flow {
             return
         }
 
-        // new-name|run://existing,existing,existing -- runs and store value
+        // new-name|run://existing,existing,... -- runs and store value
         //
         let names = factory.split(',')
         names.forEach(me.has.bind(me))
