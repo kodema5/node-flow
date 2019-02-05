@@ -70,7 +70,8 @@ class Flow {
 
         // existing://? -- run command
         //
-        let isNameExist = name!=='run' && lib.hasOwnProperty(name)
+        let isAssign = name!=='run'
+        let isNameExist = isAssign && lib.hasOwnProperty(name)
         if (isNameExist) {
             return await me.run({names:name, payload:params, _call, _output, _then, _true, _false, _name})
         }
@@ -89,28 +90,28 @@ class Flow {
         names.forEach(me.has.bind(me))
         if (names.length>1) {
             let a =  await me.run({names:factory, payload:params, _call, _output, _then, _true, _false, _name})
-            if (name!=='run') {
+            if (isAssign) {
                 lib[name] = async () => await a
             }
             return
         }
 
-        let [cls, fn_name, isClass] = me.has(factory)
-
+        let [cls, fn_name, isClass, isBuilder, isAssignResult] = me.has(factory)
 
         // new-name://Class
         //
         if (isClass) {
             let a = await new cls[fn_name](params)
-            if (name!=='run') {
+            if (isAssign) {
                 lib[name] = a
             }
             return
         }
 
+
         // new-name://Class.method
         // new-name://class.method
-        // new-name://method_        -- usually builder or an alias
+        // new-name://method_ or method!
         //
         let callback = _call
             ? async (x) => await me.run({names:_call, _output, payload:x})
@@ -121,17 +122,25 @@ class Flow {
         if (typeof cls[fn_name] !== 'function') {
             newFn = async () => await cls[fn_name]
         }
-        // a builder
-        else if (fn_name.slice(-1)=='_') {
-            newFn = await cls[fn_name](params, callback)
 
-            // it returns a class
-            if (newFn.constructor === cls) {
-                lib[name] = newFn
+        // method_ || method!
+        else if (isBuilder || isAssignResult) {
+            let fn = await cls[fn_name](params, callback)
+            if (!fn) throw "builder for " + name + " returns nothing"
+            let is_fn = typeof fn == 'function'
+
+            // new-name://Class
+            if (fn.constructor === cls || !is_fn) {
+                lib[name] = fn
                 return
             }
+            // new-name://new_ or new!
+            else {
+                newFn = fn
+            }
         }
-        // a method
+
+        // new-name://method -- for chaining
         else {
             newFn = async (payload) => await cls[fn_name](Object.assign({}, params, payload), callback)
         }
@@ -155,7 +164,7 @@ class Flow {
             return await me.run({names:_then, _output, payload})
         }
 
-        if (name!=='run') {
+        if (isAssign || isAssignResult) {
             lib[name] = Fn
         } else {
             Fn(params, callback)
@@ -165,7 +174,13 @@ class Flow {
     has(factory) {
         let me = this
         let names = factory.split('.')
-        let fn = names.pop()
+
+        var fn = names.pop()
+        let a = fn.slice(-1)
+
+        let isAssignResult = a == '!'
+        if (isAssignResult) fn = fn.slice(0,-1)
+        let isBuilder =  a == '_'
 
         var cls = me.functions
         names.forEach((n) => {
@@ -176,7 +191,8 @@ class Flow {
         if (cls[fn]==undefined) throw "undefined name " + factory
 
         let isClass = fn[0].toLowerCase()!=fn[0]
-        return [cls, fn, isClass]
+
+        return [cls, fn, isClass, isBuilder, isAssignResult]
     }
 
 
