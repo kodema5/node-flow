@@ -74,10 +74,9 @@ class Flow {
         }
 
         let isRun = name=='run'
-        let isPar = name=='par'
         if (!factory) {
-            if (isRun || isPar) {
-                throw "unable to run/par with empty factory"
+            if (isRun) {
+                throw "unable to run with empty factory"
             }
 
             // existing://? -- run command
@@ -154,20 +153,20 @@ class Flow {
 
             // new-name://a_class_instance
             //
-            if (is_fn && fn.constructor === cls) {
+            if (fn.constructor === cls) {
                 lib[name] = fn
+                return
+            }
+            // new-name://a_value
+            //
+            else if (!is_fn) {
+                lib[name] = async () => await fn
                 return
             }
             // new-name://a_function
             //
-            else if (is_fn) {
-                newFn = fn
-            }
-            // new-name://a_value
-            //
             else {
-                lib[name] = async () => await fn
-                return
+                newFn = fn
             }
         }
 
