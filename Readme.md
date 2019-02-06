@@ -5,7 +5,6 @@ node-flow uses URL to declare a function
 and pass payload.
 it can be a good tool to prototype a workflow.
 
-
 # install
 
 * clone this repository ```git clone https://github.com/kodema5/node-flow.git```
@@ -24,6 +23,9 @@ Options:
 
 More documentation can be found at https://github.com/kodema5/node-flow/
 ```
+# examples
+
+visit [node-flow-examples](https://github.com/kodema5/node-flow-examples)
 
 # synopsis
 
