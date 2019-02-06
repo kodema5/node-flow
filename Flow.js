@@ -55,7 +55,12 @@ class Flow {
         _output = 'replace',
         _name
     }) {
-        let me = this, lib = me.functions
+
+        let me = this
+
+        // only Functions should be in library!!!
+        //
+        let lib = me.functions
 
         // $params replacements and !params
         //
@@ -68,85 +73,113 @@ class Flow {
             }
         }
 
-        // existing://? -- run command
-        //
-        let isAssign = name!=='run'
-        let isNameExist = isAssign && lib.hasOwnProperty(name)
-        if (isNameExist) {
-            return await me.run({names:name, payload:params, _call, _output, _then, _true, _false, _name})
-        }
-
-        // new-name://?params -- saving params as variable
-        //
+        let isRun = name=='run'
+        let isPar = name=='par'
         if (!factory) {
-            if (name=='run') throw 'run is a reserved name'
-            lib[name] = async () => await params
-            return
-        }
-
-        // new-name|run://existing,existing,... -- runs and store value
-        //
-        let names = factory.split(',')
-        names.forEach(me.has.bind(me))
-        if (names.length>1) {
-            let a =  await me.run({names:factory, payload:params, _call, _output, _then, _true, _false, _name})
-            if (isAssign) {
-                lib[name] = async () => await a
+            if (isRun || isPar) {
+                throw "unable to run/par with empty factory"
             }
+
+            // existing://? -- run command
+            if (lib.hasOwnProperty(name)) {
+                return await me.run({
+                    names:name,
+                    payload:params,
+                    _call, _output, _then, _true, _false, _name})
+            }
+
+            // new-var://?params -- is a new variable
+            else {
+                lib[name] = async () => await params
+                return
+            }
+        }
+
+        // multiple-factories
+        //
+        let factories = factory.split(',')
+        factories.forEach(me.has.bind(me))
+
+        // run://....?params -- run and ignore result
+        //
+        if (isRun) {
+            await me.run({
+                names:factory,
+                payload:params,
+                _call, _output, _then, _true, _false, _name})
             return
         }
 
-        let [cls, fn_name, isClass, isBuilder, isAssignResult] = me.has(factory)
+        // new-name://.....?params -- creates a new sequence/flow
+        // this is a flow-builder!!
+        //
+        if (factories.length>1 && !isRun) {
+            lib[name] = async (payload) => await me.run({
+                names:factory,
+                payload: Object.assign({}, params, payload),
+                _call, _output, _then, _true, _false, _name})
+            return
+        }
+
+        // new-name://single-factory?params
+        // builds a node in flow!!!
+        //
+        let [cls, fn_name, isClass, isBuilder, isAssign] = me.has(factory)
 
         // new-name://Class
         //
         if (isClass) {
-            let a = await new cls[fn_name](params)
-            if (isAssign) {
-                lib[name] = a
-            }
+            lib[name] = await new cls[fn_name](params)
             return
         }
 
-
-        // new-name://Class.method
-        // new-name://class.method
-        // new-name://method_ or method!
-        //
         let callback = _call
             ? async (x) => await me.run({names:_call, _output, payload:x})
             : null
 
         let newFn
-        // a property
+
+        // new-name://class.property
+        //
         if (typeof cls[fn_name] !== 'function') {
             newFn = async () => await cls[fn_name]
         }
 
-        // method_ || method!
-        else if (isBuilder || isAssignResult) {
+        // new-name://factory_ or new-name://factory!
+        //
+        else if (isBuilder || isAssign) {
             let fn = await cls[fn_name](params, callback)
             if (!fn) throw "builder for " + name + " returns nothing"
             let is_fn = typeof fn == 'function'
 
-            // new-name://Class
-            if (fn.constructor === cls || !is_fn) {
+            // new-name://a_class_instance
+            //
+            if (is_fn && fn.constructor === cls) {
                 lib[name] = fn
                 return
             }
-            // new-name://new_ or new!
-            else {
+            // new-name://a_function
+            //
+            else if (is_fn) {
                 newFn = fn
+            }
+            // new-name://a_value
+            //
+            else {
+                lib[name] = async () => await fn
+                return
             }
         }
 
-        // new-name://method -- for chaining
+        // new-name://factory?params -- binds function with parameters
+        //
         else {
             newFn = async (payload) => await cls[fn_name](Object.assign({}, params, payload), callback)
         }
         if (!newFn) throw "cant build " + name + " function"
 
-        let Fn = async (payload, cb) => {
+
+        lib[name] = async (payload, cb) => {
             let a = await newFn(payload, cb || callback)
 
             if (_true && a===true) {
@@ -163,12 +196,6 @@ class Flow {
             payload = Flow.buildPayload(a, payload, _output, name)
             return await me.run({names:_then, _output, payload})
         }
-
-        if (isAssign || isAssignResult) {
-            lib[name] = Fn
-        } else {
-            Fn(params, callback)
-        }
     }
 
     has(factory) {
@@ -178,8 +205,8 @@ class Flow {
         var fn = names.pop()
         let a = fn.slice(-1)
 
-        let isAssignResult = a == '!'
-        if (isAssignResult) fn = fn.slice(0,-1)
+        let isAssign = a == '!'
+        if (isAssign) fn = fn.slice(0,-1)
         let isBuilder =  a == '_'
 
         var cls = me.functions
@@ -192,7 +219,7 @@ class Flow {
 
         let isClass = fn[0].toLowerCase()!=fn[0]
 
-        return [cls, fn, isClass, isBuilder, isAssignResult]
+        return [cls, fn, isClass, isBuilder, isAssign]
     }
 
 
